@@ -20,6 +20,29 @@ export function getSelectedEngineLabel(
     : 'Verified Telemetry Engine';
 }
 
+export const COMPILING_SHADERS_LABEL = 'Compiling WebGPU shaders...';
+
+export function formatLoadProgressNote(
+  progress: number,
+  modelId: string,
+  reportText?: string,
+): { pct: number; note: string; isCompilingShaders: boolean } {
+  const safeProgress = Number.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0;
+  if (safeProgress >= 0.99) {
+    return {
+      pct: 100,
+      note: COMPILING_SHADERS_LABEL,
+      isCompilingShaders: true,
+    };
+  }
+  const pct = Math.max(0, Math.min(98, Math.round(safeProgress * 100)));
+  return {
+    pct,
+    note: reportText || `Loading ${modelId} · ${pct}%`,
+    isCompilingShaders: false,
+  };
+}
+
 export function formatComposerBackendStatus(
   selectedBackend: InferenceBackendId,
   phase: WebGpuRuntimePhase,
@@ -36,6 +59,9 @@ export function formatComposerBackendStatus(
 
   if (phase === 'probing' || phase === 'loading') {
     const clamped = Math.max(0, Math.min(100, Math.round(progressPct)));
+    if (clamped >= 99) {
+      return { label: COMPILING_SHADERS_LABEL, dotColor: 'amber' };
+    }
     return { label: `Loading ${modelFamily} · ${clamped}%`, dotColor: 'amber' };
   }
 

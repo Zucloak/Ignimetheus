@@ -5,6 +5,8 @@ import type {
   MLCEngineInterface,
 } from '@mlc-ai/web-llm';
 import {
+  COMPILING_SHADERS_LABEL,
+  formatLoadProgressNote,
   isWorkerSandboxError,
   WEBGPU_IFRAME_DISABLED_NOTE,
   type InferenceBackendId,
@@ -20,7 +22,9 @@ import {
   evaluateAuditedReasoningResponse,
   extractThoughtAndAnswer,
   NUMERIC_GUARDRAIL_INSTRUCTION,
+  parseThinkSteps,
   quickRuleMatch,
+  REASONING_VALIDATION_FAILED_NOTE,
   type AuditedReasoningEvaluation,
   type SafetyReasoningStep,
   type SafetyRecommendation,
@@ -319,7 +323,6 @@ export function useSafetyOfficerLLM({
           engineInitPromise = (async (): Promise<MLCEngineInterface | null> => {
             const {
               CreateWebWorkerMLCEngine,
-              CreateMLCEngine,
               prebuiltAppConfig,
             } = await import('@mlc-ai/web-llm');
 
@@ -347,98 +350,137 @@ export function useSafetyOfficerLLM({
               `Initializing ${verifiedModelId} (${profile.tier} tier, KV ${contextWindowSize}) via WebGPU worker...`,
             );
 
-          const initProgressCallback = (report: InitProgressReport) => {
-            const pct = Math.max(0, Math.min(100, Math.round((report.progress ?? 0) * 100)));
-            setLoadProgress(pct);
-            setLoadNote(report.text || `Loading ${verifiedModelId} · ${pct}%`);
-          };
+            const PROGRESS_THROTTLE_MS = 120;
+            let lastProgressFlushMs = 0;
+            let trailingTimerId: ReturnType<typeof setTimeout> | null = null;
+            let pendingReport: InitProgressReport | null = null;
 
-          const chatOpts = {
-            context_window_size: contextWindowSize,
-          };
-
-          let createdEngine: MLCEngineInterface;
-          try {
-            const worker = new Worker(new URL('../workers/webllm.worker.ts', import.meta.url), {
-              type: 'module',
-            });
-            // Scoped strictly to the dedicated WebLLM worker instance
-            worker.onerror = (errEvent) => {
-              errEvent.preventDefault?.();
-              handleScopedWorkerError('worker error');
-            };
-            worker.onmessageerror = () => {
-              handleScopedWorkerError('worker message error');
-            };
-            engineWorkerInstance = worker;
-
-            createdEngine = await CreateWebWorkerMLCEngine(
-              worker,
-              verifiedModelId,
-              { initProgressCallback },
-              chatOpts,
-            );
-          } catch (workerErr) {
-            if (engineWorkerInstance) {
-              try {
-                engineWorkerInstance.onerror = null;
-                engineWorkerInstance.onmessageerror = null;
-                engineWorkerInstance.terminate();
-              } catch {
-                // Ignore
-              }
-              engineWorkerInstance = null;
-            }
-            if (isWorkerSandboxError(workerErr)) {
-              setLoadNote(
-                'Worker restricted in iframe — falling back to main-thread WebGPU engine...',
-              );
-              createdEngine = await CreateMLCEngine(
+            const flushProgressReport = (report: InitProgressReport) => {
+              if (loadTokenRef.current !== token) return;
+              const formatted = formatLoadProgressNote(
+                report.progress ?? 0,
                 verifiedModelId,
-                { initProgressCallback },
-                chatOpts,
+                report.text,
               );
-            } else {
-              throw workerErr;
-            }
-          }
+              setLoadProgress(formatted.pct);
+              setLoadNote(formatted.note);
+            };
 
-          // Conditional 1-token shader warmup on balanced & performance tiers
-          if (profile.enableWarmup) {
-            setLoadNote(`Pre-compiling WebGPU shaders (${profile.tier} tier)...`);
-            const warmupParams = getGenerationParamsForModel(verifiedModelId, profile);
-            try {
-              const warmupRequest: ChatCompletionRequestNonStreaming & { top_k?: number } = {
-                messages: [{ role: 'user', content: 'ok' }],
-                max_tokens: 1,
-                temperature: isQwen3ModelId(verifiedModelId) ? warmupParams.temperature : 0.1,
-                ...(isQwen3ModelId(verifiedModelId)
-                  ? { top_p: warmupParams.top_p, top_k: warmupParams.top_k }
-                  : {}),
-                stream: false,
-              };
-              await withTimeout(
-                createdEngine.chat.completions.create(warmupRequest),
-                WARMUP_TIMEOUT_MS,
-                'WebGPU warmup timed out after 10s',
-              );
-            } catch {
-              // Non-fatal warmup timeout; continue with initialized engine
-            } finally {
-              if (typeof createdEngine.resetChat === 'function') {
-                try {
-                  await createdEngine.resetChat();
-                } catch {
-                  // Ignore warmup reset error
+            const clearTrailingProgressTimer = () => {
+              if (trailingTimerId !== null) {
+                clearTimeout(trailingTimerId);
+                trailingTimerId = null;
+              }
+              pendingReport = null;
+            };
+
+            const initProgressCallback = (report: InitProgressReport) => {
+              const now = performance.now();
+              const elapsed = now - lastProgressFlushMs;
+              if (elapsed >= PROGRESS_THROTTLE_MS) {
+                clearTrailingProgressTimer();
+                lastProgressFlushMs = now;
+                flushProgressReport(report);
+              } else {
+                pendingReport = report;
+                if (trailingTimerId === null) {
+                  const waitMs = Math.max(0, PROGRESS_THROTTLE_MS - elapsed);
+                  trailingTimerId = setTimeout(() => {
+                    trailingTimerId = null;
+                    const nextReport = pendingReport;
+                    pendingReport = null;
+                    if (nextReport) {
+                      lastProgressFlushMs = performance.now();
+                      flushProgressReport(nextReport);
+                    }
+                  }, waitMs);
                 }
               }
-            }
-          }
+            };
 
-          engineInstance = createdEngine;
-          return createdEngine;
-        })();
-      }
+            const chatOpts = {
+              context_window_size: contextWindowSize,
+            };
+
+            let createdEngine: MLCEngineInterface;
+            try {
+              try {
+                const worker = new Worker(new URL('../workers/webllm.worker.ts', import.meta.url), {
+                  type: 'module',
+                });
+                // Scoped strictly to the dedicated WebLLM worker instance
+                worker.onerror = (errEvent) => {
+                  errEvent.preventDefault?.();
+                  handleScopedWorkerError('worker error');
+                };
+                worker.onmessageerror = () => {
+                  handleScopedWorkerError('worker message error');
+                };
+                engineWorkerInstance = worker;
+
+                createdEngine = await CreateWebWorkerMLCEngine(
+                  worker,
+                  verifiedModelId,
+                  { initProgressCallback },
+                  chatOpts,
+                );
+              } catch (workerErr) {
+                if (engineWorkerInstance) {
+                  try {
+                    engineWorkerInstance.onerror = null;
+                    engineWorkerInstance.onmessageerror = null;
+                    engineWorkerInstance.terminate();
+                  } catch {
+                    // Ignore
+                  }
+                  engineWorkerInstance = null;
+                }
+                if (isWorkerSandboxError(workerErr)) {
+                  throw new Error(WEBGPU_IFRAME_DISABLED_NOTE);
+                }
+                throw workerErr;
+              }
+
+              // Conditional 1-token shader warmup on balanced & performance tiers inside worker
+              if (profile.enableWarmup) {
+                setLoadProgress(100);
+                setLoadNote(COMPILING_SHADERS_LABEL);
+                const warmupParams = getGenerationParamsForModel(verifiedModelId, profile);
+                try {
+                  const warmupRequest: ChatCompletionRequestNonStreaming & { top_k?: number } = {
+                    messages: [{ role: 'user', content: 'ok' }],
+                    max_tokens: 1,
+                    temperature: isQwen3ModelId(verifiedModelId) ? warmupParams.temperature : 0.1,
+                    ...(isQwen3ModelId(verifiedModelId)
+                      ? { top_p: warmupParams.top_p, top_k: warmupParams.top_k }
+                      : {}),
+                    stream: false,
+                  };
+                  await withTimeout(
+                    createdEngine.chat.completions.create(warmupRequest),
+                    WARMUP_TIMEOUT_MS,
+                    'WebGPU warmup timed out after 10s',
+                  );
+                } catch {
+                  // Non-fatal warmup timeout; continue with initialized engine
+                } finally {
+                  if (typeof createdEngine.resetChat === 'function') {
+                    try {
+                      await createdEngine.resetChat();
+                    } catch {
+                      // Ignore warmup reset error
+                    }
+                  }
+                }
+              }
+            } finally {
+              clearTrailingProgressTimer();
+            }
+
+            engineInstance = createdEngine;
+            return createdEngine;
+          })();
+        }
 
       const engine = await engineInitPromise;
 
@@ -699,13 +741,15 @@ export function useSafetyOfficerLLM({
         const evaluation = await runAuditedWebGpuCompletion([
           {
             role: 'system',
-            content: `You are an onboard Spacecraft Fire Safety Officer. Provide crisp, technical fire-suppression orders citing the exact NASA PSI run ID. Zero emojis. ${NUMERIC_GUARDRAIL_INSTRUCTION}`,
+            content: `You are the Ignimetheus Spacecraft Fire Safety Officer. Provide crisp, technical fire-suppression orders citing the exact NASA PSI run ID without emojis. ${NUMERIC_GUARDRAIL_INSTRUCTION}`,
           },
           { role: 'user', content: prompt },
         ]);
         if (cancelTokenRef.current !== token) return;
         if (evaluation?.auditedText) {
           const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
+          const thinkNodes = parseThinkSteps(evaluation.reasoningPath);
+          const mergedSteps = thinkNodes.length > 0 ? [...steps, ...thinkNodes] : steps;
           appendAssistantMessage({
             id: `${diagId}-a`,
             role: 'assistant',
@@ -714,7 +758,7 @@ export function useSafetyOfficerLLM({
             kind: 'diagnostic',
             promptForRegenerate: userPrompt,
             snapshot: snapMeta,
-            thoughtSteps: steps,
+            thoughtSteps: mergedSteps,
             thoughtDurationS: durationS,
             ...(evaluation.reasoningPath ? { reasoningPath: evaluation.reasoningPath } : {}),
             reasoningFailedValidation: false,
@@ -730,6 +774,14 @@ export function useSafetyOfficerLLM({
         if (!completed || cancelTokenRef.current !== token) return;
       }
       const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
+      const failedThinkNodes = parseThinkSteps(failedEvaluation?.reasoningPath);
+      const mergedFailedSteps =
+        failedThinkNodes.length > 0 ? [...steps, ...failedThinkNodes] : steps;
+      const didFailAudit = Boolean(
+        failedEvaluation &&
+          (failedEvaluation.reasoningFailedValidation ||
+            failedEvaluation.auditResult?.passed === false),
+      );
       appendAssistantMessage({
         id: `${diagId}-a`,
         role: 'assistant',
@@ -738,13 +790,14 @@ export function useSafetyOfficerLLM({
         kind: 'diagnostic',
         promptForRegenerate: userPrompt,
         snapshot: snapMeta,
-        thoughtSteps: steps,
+        thoughtSteps: mergedFailedSteps,
         thoughtDurationS: durationS,
-        ...(failedEvaluation?.reasoningPath
+        ...(failedEvaluation?.reasoningPath ? { reasoningPath: failedEvaluation.reasoningPath } : {}),
+        ...(didFailAudit
           ? {
-              reasoningPath: failedEvaluation.reasoningPath,
-              reasoningFailedValidation: failedEvaluation.reasoningFailedValidation,
-              reasoningFailureNote: failedEvaluation.reasoningFailureNote,
+              reasoningFailedValidation: true,
+              reasoningFailureNote:
+                failedEvaluation?.reasoningFailureNote ?? REASONING_VALIDATION_FAILED_NOTE,
             }
           : {}),
       });
@@ -922,6 +975,8 @@ export function useSafetyOfficerLLM({
           if (cancelTokenRef.current !== token) return;
           if (evaluation?.auditedText) {
             const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
+            const thinkNodes = parseThinkSteps(evaluation.reasoningPath);
+            const mergedSteps = thinkNodes.length > 0 ? [...steps, ...thinkNodes] : steps;
             appendAssistantMessage({
               id: `${msgId}-a`,
               role: 'assistant',
@@ -930,7 +985,7 @@ export function useSafetyOfficerLLM({
               kind: 'chat',
               promptForRegenerate: question,
               snapshot: snapMeta,
-              thoughtSteps: steps,
+              thoughtSteps: mergedSteps,
               thoughtDurationS: durationS,
               ...(evaluation.reasoningPath ? { reasoningPath: evaluation.reasoningPath } : {}),
               reasoningFailedValidation: false,
@@ -954,6 +1009,14 @@ export function useSafetyOfficerLLM({
           unitSystem,
           markers,
         );
+        const failedThinkNodes = parseThinkSteps(failedEvaluation?.reasoningPath);
+        const mergedFailedSteps =
+          failedThinkNodes.length > 0 ? [...steps, ...failedThinkNodes] : steps;
+        const didFailAudit = Boolean(
+          failedEvaluation &&
+            (failedEvaluation.reasoningFailedValidation ||
+              failedEvaluation.auditResult?.passed === false),
+        );
         appendAssistantMessage({
           id: `${msgId}-a`,
           role: 'assistant',
@@ -962,13 +1025,16 @@ export function useSafetyOfficerLLM({
           kind: 'chat',
           promptForRegenerate: question,
           snapshot: snapMeta,
-          thoughtSteps: steps,
+          thoughtSteps: mergedFailedSteps,
           thoughtDurationS: durationS,
           ...(failedEvaluation?.reasoningPath
+            ? { reasoningPath: failedEvaluation.reasoningPath }
+            : {}),
+          ...(didFailAudit
             ? {
-                reasoningPath: failedEvaluation.reasoningPath,
-                reasoningFailedValidation: failedEvaluation.reasoningFailedValidation,
-                reasoningFailureNote: failedEvaluation.reasoningFailureNote,
+                reasoningFailedValidation: true,
+                reasoningFailureNote:
+                  failedEvaluation?.reasoningFailureNote ?? REASONING_VALIDATION_FAILED_NOTE,
               }
             : {}),
         });
@@ -1104,7 +1170,7 @@ export function useSafetyOfficerLLM({
               : promptText;
           const sys =
             target.kind === 'diagnostic'
-              ? `You are an onboard Spacecraft Fire Safety Officer. Provide crisp, technical fire-suppression orders citing the exact NASA PSI run ID. Zero emojis. ${NUMERIC_GUARDRAIL_INSTRUCTION}`
+              ? `You are the Ignimetheus Spacecraft Fire Safety Officer. Provide crisp, technical fire-suppression orders citing the exact NASA PSI run ID without emojis. ${NUMERIC_GUARDRAIL_INSTRUCTION}`
               : buildTieredSystemPrompt(
                   params,
                   telemetry,
@@ -1123,10 +1189,14 @@ export function useSafetyOfficerLLM({
             nextReasoningPath = evaluation.reasoningPath;
             nextReasoningFailed = false;
             nextReasoningFailureNote = undefined;
-          } else if (evaluation?.reasoningPath) {
+          } else if (evaluation) {
             nextReasoningPath = evaluation.reasoningPath;
-            nextReasoningFailed = evaluation.reasoningFailedValidation;
-            nextReasoningFailureNote = evaluation.reasoningFailureNote;
+            nextReasoningFailed = Boolean(
+              evaluation.reasoningFailedValidation || evaluation.auditResult?.passed === false,
+            );
+            nextReasoningFailureNote =
+              evaluation.reasoningFailureNote ??
+              (nextReasoningFailed ? REASONING_VALIDATION_FAILED_NOTE : undefined);
           }
         } else if (outOfScopeAnswer === null && fastPathAnswer === null) {
           const completed = await awaitReasoningTrace(token, 1180);
@@ -1144,6 +1214,8 @@ export function useSafetyOfficerLLM({
 
       if (cancelTokenRef.current !== token) return;
       const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
+      const thinkNodes = parseThinkSteps(nextReasoningPath);
+      const mergedSteps = thinkNodes.length > 0 ? [...steps, ...thinkNodes] : steps;
       setMessages((prev) => {
         const nextThread = prev.map((m) =>
           m.id === assistantMsgId
@@ -1152,7 +1224,7 @@ export function useSafetyOfficerLLM({
                 content: nextContent,
                 source: nextSource,
                 snapshot: snapMeta,
-                thoughtSteps: steps,
+                thoughtSteps: mergedSteps,
                 thoughtDurationS: durationS,
                 reasoningPath: nextReasoningPath,
                 reasoningFailedValidation: nextReasoningFailed,
@@ -1227,10 +1299,15 @@ export function useSafetyOfficerLLM({
     [activeModelId, hardwareProfile, preferredModelFamily, selectedBackend],
   );
 
+  const isModelLoading =
+    selectedBackend === 'webgpu' &&
+    (webGpuPhase === 'probing' || webGpuPhase === 'loading');
+
   return {
     selectedBackend,
     preferredModelFamily,
     webGpuPhase,
+    isModelLoading,
     webGpuUnavailableNote,
     constrainedReason: hardwareProfile?.constrainedReason ?? null,
     status,

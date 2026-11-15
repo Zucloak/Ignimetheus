@@ -33,6 +33,7 @@ export interface ThoughtLineProps {
   steps?: ThoughtStep[];
   stepIntervalMs?: number;
   defaultExpanded?: boolean;
+  auditNote?: string | null;
   onToggleExpand?: (expanded: boolean) => void;
   className?: string;
   testId?: string;
@@ -360,6 +361,7 @@ export function ThoughtLine({
   steps = DEFAULT_TELEMETRY_STEPS,
   stepIntervalMs = 850,
   defaultExpanded = false,
+  auditNote = null,
   onToggleExpand,
   className = '',
   testId = 'safety-thought-line',
@@ -486,47 +488,59 @@ export function ThoughtLine({
         )}
       </button>
 
-      {resolvedSteps.length > 0 && (
+      {(resolvedSteps.length > 0 || Boolean(auditNote)) && (
         <div
           className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
             isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
           }`}
         >
           <div className="overflow-hidden">
-            <ol className="ml-[7px] mt-1.5 space-y-2 border-l border-[#27272A] pl-4 pb-1">
-              {resolvedSteps.map((step) => {
-                if (step.status === 'pending' && isThinking) return null;
+            {resolvedSteps.length > 0 && (
+              <ol className="ml-[7px] mt-1.5 space-y-2 border-l border-[#27272A] pl-4 pb-1">
+                {resolvedSteps.map((step) => {
+                  if (step.status === 'pending' && isThinking) return null;
 
-                const isStepActive = step.status === 'active';
-                return (
-                  <li
-                    key={step.id}
-                    className="relative flex flex-col gap-0.5 transition-opacity duration-200"
-                  >
-                    <span
-                      className={`absolute -left-[20.5px] top-[5px] h-1.5 w-1.5 rounded-full transition-colors ${
-                        isStepActive ? 'bg-[#F4F4F5] ring-2 ring-[#27272A]' : 'bg-[#52525B]'
-                      }`}
-                      aria-hidden="true"
-                    />
-
-                    <span
-                      className={`text-xs leading-snug ${
-                        isStepActive ? 'font-medium text-[#E4E4E7]' : 'text-[#A1A1AA]'
-                      }`}
+                  const isStepActive = step.status === 'active';
+                  return (
+                    <li
+                      key={step.id}
+                      className="relative flex flex-col gap-0.5 transition-opacity duration-200"
                     >
-                      {toSafeReactNode(step.label)}
-                    </span>
+                      <span
+                        className={`absolute -left-[20.5px] top-[5px] h-1.5 w-1.5 rounded-full transition-colors ${
+                          isStepActive ? 'bg-[#F4F4F5] ring-2 ring-[#27272A]' : 'bg-[#52525B]'
+                        }`}
+                        aria-hidden="true"
+                      />
 
-                    {step.detail !== undefined && step.detail !== null && (
-                      <span className="font-mono text-[11px] leading-tight text-[#71717A]">
-                        {toSafeReactNode(step.detail)}
+                      <span
+                        className={`text-xs leading-snug ${
+                          isStepActive ? 'font-medium text-[#E4E4E7]' : 'text-[#A1A1AA]'
+                        }`}
+                      >
+                        {toSafeReactNode(step.label)}
                       </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
+
+                      {step.detail !== undefined && step.detail !== null && (
+                        <span className="font-mono text-[11px] leading-tight text-[#71717A]">
+                          {toSafeReactNode(step.detail)}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+            {auditNote && !isThinking && (
+              <div
+                data-testid={`${testId}-audit-note`}
+                className="ml-[7px] border-l border-[#27272A] pl-4 pt-1 pb-1"
+              >
+                <span className="inline-block rounded border border-[#27272A] bg-[#141418] px-2 py-0.5 font-mono text-[10.5px] text-[#A1A1AA]">
+                  {toSafeReactNode(auditNote)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

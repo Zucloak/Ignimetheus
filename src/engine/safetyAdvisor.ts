@@ -35,7 +35,7 @@ export interface SafetyRecommendation {
 export interface SafetyReasoningStep {
   id: string;
   label: string;
-  detail: string;
+  detail?: string;
 }
 
 /**
@@ -237,7 +237,10 @@ export function buildVerifiedSafetySnapshot(
 }
 
 export const NUMERIC_GUARDRAIL_INSTRUCTION =
-  'CRITICAL RULE: Use ONLY numbers present in the telemetry snapshot. Never invent, extrapolate, or alter numeric values.';
+  'When referencing the active simulation or answering questions about current chamber conditions, cite ONLY the exact numerical values from the provided [TELEMETRY] snapshot—never invent, round differently, or alter any telemetry number.';
+
+export const CONVERSATIONAL_SAFETY_OFFICER_PROMPT =
+  `You are the Ignimetheus Spacecraft Fire Safety Officer. Converse naturally, concisely, and professionally without emojis. If the user greets you or asks a general question, reply conversationally. ${NUMERIC_GUARDRAIL_INSTRUCTION}`;
 
 export function buildWebLlmPrompt(
   params: SimulationParams,
@@ -253,11 +256,13 @@ export function buildWebLlmPrompt(
   const flux = formatHeatFlux(telemetry.totalHeatFluxWm2, unitSystem);
 
   return [
-    'You are an onboard Spacecraft Fire Safety Officer. Provide concise, non-decorative, deterministic engineering fire-suppression actions.',
+    'You are the Ignimetheus Spacecraft Fire Safety Officer. Provide concise, non-decorative, deterministic engineering fire-suppression actions.',
     `Do not use emojis or speculative prose. Cite the exact NASA PSI experiment ID provided. ${NUMERIC_GUARDRAIL_INSTRUCTION}`,
+    '[TELEMETRY]',
     `Telemetry: Material=${mat.name}, O2=${params.o2Percent.toFixed(1)}%, Pressure=${press.text} ${press.unit}, Flow=${vel.text} ${vel.unit} (${params.flowMode}), Gravity=${params.gravityMs2.toFixed(2)} m/s2.`,
     `Computed Regime=${telemetry.regime}, SpreadRate=${spread.text} ${spread.unit}, EffectiveLOI=${telemetry.effectiveLoiPercent.toFixed(1)}%, ExtinctionIndexDaStar=${telemetry.damkohlerNumber.toFixed(2)}, TotalHeatFlux=${flux.text} ${flux.unit}.`,
     `Closest Reference Scenario (Adapted): ${exp.id} (${exp.psiCitation}) — ${exp.discrepancyNote1gVsUg}`,
+    '[/TELEMETRY]',
     'Respond with 4 short labeled lines: HVAC:, ATMOS:, SUPPRESSION:, NASA_REF:.',
   ].join('\n');
 }
@@ -286,11 +291,12 @@ export function buildLiveContextSystemPrompt(
       : '(Pass/Fail Criterion <= 152mm)';
 
   return [
-    'You are an onboard Spacecraft AI Fire Safety Officer inside a precision microgravity combustion console.',
-    `Rules: Zero emojis. Be concise, technical, and always reference the live chamber values and closest reference run ID below. ${NUMERIC_GUARDRAIL_INSTRUCTION}`,
+    CONVERSATIONAL_SAFETY_OFFICER_PROMPT,
+    '[TELEMETRY]',
     `LIVE CHAMBER: Material=${mat.name} (${mat.shortName}), O2=${params.o2Percent.toFixed(1)}%, Pressure=${press.text} ${press.unit}, HVAC_Velocity=${vel.text} ${vel.unit} (${params.flowMode}), Gravity=${grav.text} ${grav.unit}.`,
     `LIVE TELEMETRY: ChamberState=${telemetry.chamberState} (Igniter=${telemetry.igniterPowerW}W), Regime=${telemetry.regime}, SpreadRate=${spread.text} ${spread.unit}, EffectiveLOI=${telemetry.effectiveLoiPercent.toFixed(1)}% (1g LOI=${mat.loi1gPercent.toFixed(1)}%), LOI_Margin=${telemetry.loiMarginPercent.toFixed(1)}%, ExtinctionIndexDaStar=${telemetry.damkohlerNumber.toFixed(2)}, PeakTemp=${temp.text} ${temp.unit}, HeatFlux=${flux.text} ${flux.unit}.`,
     `CLOSEST REFERENCE SCENARIO (ADAPTED): ${exp.id} (${exp.program}) — ${exp.psiCitation}. Reference Baseline: ${obsBurnNote} ${obsSpreadNote}. Note: ${exp.discrepancyNote1gVsUg}`,
+    '[/TELEMETRY]',
   ].join('\n');
 }
 
@@ -312,19 +318,23 @@ export function buildTieredSystemPrompt(
 
   if (budget === 'compact') {
     return [
-      `Spacecraft Fire Safety Officer. Zero emojis. ${NUMERIC_GUARDRAIL_INSTRUCTION}`,
+      CONVERSATIONAL_SAFETY_OFFICER_PROMPT,
+      '[TELEMETRY]',
       `CHAMBER: ${mat.shortName}, O2=${params.o2Percent.toFixed(1)}%, V=${vel.text}${vel.unit} (${params.flowMode}), g=${params.gravityMs2.toFixed(2)}m/s2.`,
       `STATE: ${telemetry.regime}, Vf=${spread.text}${spread.unit}, LOI_eff=${telemetry.effectiveLoiPercent.toFixed(1)}%, Da*=${telemetry.damkohlerNumber.toFixed(2)}, Ref=${exp.id}.`,
+      '[/TELEMETRY]',
     ].join('\n');
   }
 
   const press = formatPressure(params.pressurePa, unitSystem);
   const temp = formatTemperature(telemetry.peakFlameTempK, unitSystem);
   return [
-    `You are an onboard Spacecraft Fire Safety Officer. Zero emojis. ${NUMERIC_GUARDRAIL_INSTRUCTION}`,
+    CONVERSATIONAL_SAFETY_OFFICER_PROMPT,
+    '[TELEMETRY]',
     `CHAMBER: ${mat.name} (${mat.shortName}), O2=${params.o2Percent.toFixed(1)}%, P=${press.text} ${press.unit}, Flow=${vel.text} ${vel.unit} (${params.flowMode}), g=${params.gravityMs2.toFixed(2)} m/s2.`,
     `TELEMETRY: State=${telemetry.chamberState}, Regime=${telemetry.regime}, Spread=${spread.text} ${spread.unit}, EffLOI=${telemetry.effectiveLoiPercent.toFixed(1)}% (Margin=${telemetry.loiMarginPercent.toFixed(1)}%), Da*=${telemetry.damkohlerNumber.toFixed(2)}, PeakT=${temp.text} ${temp.unit}.`,
     `REFERENCE: ${exp.id} (${exp.program}) — ${exp.psiCitation}.`,
+    '[/TELEMETRY]',
   ].join('\n');
 }
 
@@ -544,9 +554,16 @@ export function auditLlmNumbers(
     )
     .replace(/\b(?:m\/s2|m\/s²|cm2|cm²|m2|m²|ft2|ft²)\b/gi, ' ');
 
-  const allowed = buildAllowedTelemetryNumberSet(params, telemetry, matched, unitSystem, markers);
   const matches = scrubbed.match(/(?<![A-Za-z])[+-]?\d+(?:\.\d+)?(?![A-Za-z])/g) ?? [];
+  if (matches.length === 0) {
+    return {
+      passed: true,
+      extractedNumbers: [],
+      rejectedNumbers: [],
+    };
+  }
 
+  const allowed = buildAllowedTelemetryNumberSet(params, telemetry, matched, unitSystem, markers);
   const extractedNumbers: number[] = [];
   const rejectedNumbers: number[] = [];
 
@@ -598,7 +615,54 @@ export function trimToLastCompleteSentence(text: string): string {
 }
 
 export const REASONING_VALIDATION_FAILED_NOTE =
-  'Local Reasoning Process failed validation (numerical trace mismatch); fallback engaged.';
+  'Audit mismatch — deterministic telemetry fallback used';
+
+const EMOJI_CHAR_REGEX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}]/gu;
+
+export function stripEmojis(text: string): string {
+  return text.replace(EMOJI_CHAR_REGEX, '').replace(/[ \t]{2,}/g, ' ').trim();
+}
+
+/**
+ * Parses Qwen3 `<think>...</think>` paragraphs or step lines into clean monochrome
+ * timeline nodes with zero emojis.
+ */
+export function parseThinkSteps(reasoningPath: string | null | undefined): SafetyReasoningStep[] {
+  if (!reasoningPath) return [];
+  const cleaned = reasoningPath.replace(EMOJI_CHAR_REGEX, '').trim();
+  if (!cleaned) return [];
+
+  let blocks = cleaned
+    .split(/\n\s*\n+/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  if (blocks.length === 1 && blocks[0].includes('\n')) {
+    const lines = blocks[0]
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (lines.length > 1) {
+      blocks = lines;
+    }
+  }
+
+  return blocks
+    .map((block, idx) => {
+      const normalized = block
+        .replace(/^[-*•]\s+/, '')
+        .replace(/^\d+[.)]\s+/, '')
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/\s*\n\s*/g, ' ')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+      return {
+        id: `think-${idx}`,
+        label: normalized,
+      };
+    })
+    .filter((step) => step.label.length > 0);
+}
 
 export interface ExtractedThoughtAndAnswer {
   reasoningPath: string | null;
@@ -618,7 +682,7 @@ export function extractThoughtAndAnswer(rawText: string): ExtractedThoughtAndAns
 
   const thoughts: string[] = [];
   let stripped = rawText.replace(/<think>([\s\S]*?)<\/think>/gi, (_match, inner: string) => {
-    const cleanedThought = inner.trim();
+    const cleanedThought = inner.replace(EMOJI_CHAR_REGEX, '').trim();
     if (cleanedThought) {
       thoughts.push(cleanedThought);
     }
@@ -629,14 +693,17 @@ export function extractThoughtAndAnswer(rawText: string): ExtractedThoughtAndAns
   const openTagMatch = stripped.match(/<think>/i);
   if (openTagMatch && openTagMatch.index !== undefined) {
     hasUnclosedThink = true;
-    const unclosedThought = stripped.slice(openTagMatch.index + openTagMatch[0].length).trim();
+    const unclosedThought = stripped
+      .slice(openTagMatch.index + openTagMatch[0].length)
+      .replace(EMOJI_CHAR_REGEX, '')
+      .trim();
     if (unclosedThought) {
       thoughts.push(unclosedThought);
     }
     stripped = stripped.slice(0, openTagMatch.index);
   }
 
-  const answer = stripped.replace(/<\/think>/gi, '').trim();
+  const answer = stripped.replace(/<\/think>/gi, '').replace(EMOJI_CHAR_REGEX, '').trim();
   const reasoningPath = thoughts.length > 0 ? thoughts.join('\n\n') : null;
 
   return {
@@ -657,8 +724,9 @@ export interface AuditedReasoningEvaluation {
 /**
  * Extracts any `<think>` block, optionally trims truncated final answers, and runs
  * strict numeric validation strictly on the final answer (excluding `<think>` scratchpad numbers).
- * If validation fails while a reasoning path exists, preserves the thought path flagged as
- * failed validation so the UI can fall back to Deterministic while keeping audit transparency.
+ * Responses containing zero numbers pass validation cleanly without triggering fallback.
+ * If validation fails on a numeric reply, preserves any thought path and flags validation failure
+ * so the UI can show a subtle monochrome note inside the unified timeline.
  */
 export function evaluateAuditedReasoningResponse(
   rawText: string,
@@ -705,10 +773,8 @@ export function evaluateAuditedReasoningResponse(
     return {
       auditedText: null,
       ...(extracted.reasoningPath ? { reasoningPath: extracted.reasoningPath } : {}),
-      reasoningFailedValidation: Boolean(extracted.reasoningPath),
-      ...(extracted.reasoningPath
-        ? { reasoningFailureNote: REASONING_VALIDATION_FAILED_NOTE }
-        : {}),
+      reasoningFailedValidation: true,
+      reasoningFailureNote: REASONING_VALIDATION_FAILED_NOTE,
       auditResult,
     };
   }
@@ -915,6 +981,35 @@ export function quickRuleMatch(
   return null;
 }
 
+function matchConversationalFallback(question: string): string | null {
+  const q = question
+    .toLowerCase()
+    .replace(/[^\w\s?'-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!q) return null;
+
+  const mentionsTelemetryOrSim =
+    /\b(?:o2|oxygen|flow|velocity|pressure|gravity|telemetry|chamber|duct|loi|spread|flame|ignit|burn|quench|pmma|nomex|silicone|cellulose|saffire|bass|flex|diagnostic|suppress|extinguish|hvac|n2|arrestor|baffle|tc|probe|caliper|1g|0g)\b/.test(
+      q,
+    );
+  if (mentionsTelemetryOrSim) return null;
+
+  if (/^(?:hello|hi|hey|greetings|howdy|good morning|good afternoon|good evening)(?:\s+there|\s+officer|\s+ignimetheus)?$/.test(q)) {
+    return 'Hello. I am the Ignimetheus Spacecraft Fire Safety Officer. Ask me about microgravity combustion behavior, NASA PSI reference runs, or the live chamber telemetry whenever you are ready.';
+  }
+
+  if (/^(?:thanks|thank you|thx|appreciate it)(?:\s+so much|\s+very much)?$/.test(q)) {
+    return 'You are welcome. Let me know if you want to inspect the live chamber margins, run a suppression check, or discuss spacecraft fire-safety concepts.';
+  }
+
+  if (/^(?:who are you|what are you|what can you do|help)$/.test(q)) {
+    return 'I am the Ignimetheus Spacecraft Fire Safety Officer. I can discuss spacecraft fire-safety concepts, compare 0g and 1g flammability margins, cite NASA PSI benchmarks (Saffire, BASS-II, FLEX), and audit live chamber telemetry or suppression actions.';
+  }
+
+  return null;
+}
+
 export function buildGroundedChatAnswer(
   question: string,
   params: SimulationParams,
@@ -931,6 +1026,11 @@ export function buildGroundedChatAnswer(
   const fastMatch = quickRuleMatch(question, params, telemetry, matched, unitSystem, markers);
   if (fastMatch !== null) {
     return fastMatch;
+  }
+
+  const conversationalFallback = matchConversationalFallback(question);
+  if (conversationalFallback !== null) {
+    return conversationalFallback;
   }
 
   const mat = MATERIALS[params.materialId];

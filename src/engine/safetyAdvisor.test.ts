@@ -12,6 +12,7 @@ import {
   evaluateAuditedReasoningResponse,
   extractThoughtAndAnswer,
   NUMERIC_GUARDRAIL_INSTRUCTION,
+  parseThinkSteps,
   quickRuleMatch,
   REASONING_VALIDATION_FAILED_NOTE,
   tokenizeInlineMetricPills,
@@ -29,12 +30,15 @@ import {
 
 const experiments = experimentsJson as NasaPsiExperiment[];
 
-test('live context system prompt injects chamber parameters and matched NASA PSI run ID', () => {
+test('live context system prompt injects conversational framing, [TELEMETRY] snapshot, and matched NASA PSI run ID', () => {
   const params = MISSION_PRESETS[1].params; // Orion / Artemis 34% O2
   const telemetry = computeThermoTelemetry(params);
   const matched = matchClosestExperiment(params, experiments);
   const sys = buildLiveContextSystemPrompt(params, telemetry, matched, 'nasa-psi');
 
+  assert.ok(sys.includes('Ignimetheus Spacecraft Fire Safety Officer'));
+  assert.ok(sys.includes('[TELEMETRY]'));
+  assert.ok(!sys.includes('always reference the live chamber values'));
   assert.ok(sys.includes('34.0%'));
   assert.ok(sys.includes('56.5 kPa'));
   assert.ok(sys.includes('BASS-II-45'));
@@ -168,10 +172,10 @@ test('buildSafetyReasoningSteps encodes live telemetry, geometry, hardware, and 
 
   assert.equal(steps.length, 4);
   assert.ok(steps[0].label.includes('Avionics Channel'));
-  assert.ok(steps[1].detail.includes('Wake Baffle'));
-  assert.ok(steps[1].detail.includes('N2 Nozzle Armed'));
+  assert.ok(steps[1].detail?.includes('Wake Baffle'));
+  assert.ok(steps[1].detail?.includes('N2 Nozzle Armed'));
   assert.ok(steps[2].label.includes(matched.experiment.id));
-  assert.ok(steps[3].detail.includes('1 active CAD marker'));
+  assert.ok(steps[3].detail?.includes('1 active CAD marker'));
 });
 
 test('quickRuleMatch fast-path routes standard telemetry queries and returns null on open-ended prompts', () => {
@@ -322,3 +326,67 @@ test('evaluateAuditedReasoningResponse preserves rejected <think> path with fall
   assert.equal(failedEval.auditResult?.passed, false);
 });
 
+test('conversational responses with zero numbers pass numeric audit cleanly without fallback', () => {
+  const params = MISSION_PRESETS[0].params;
+  const telemetry = computeThermoTelemetry(params);
+  const matched = matchClosestExperiment(params, experiments);
+
+  const greetingReply =
+    'Hello! I am the Ignimetheus Spacecraft Fire Safety Officer. How can I assist you with microgravity combustion or cabin fire safety today?';
+  const audit = auditLlmNumbers(greetingReply, params, telemetry, matched, 'nasa-psi');
+  assert.equal(audit.passed, true);
+  assert.deepEqual(audit.extractedNumbers, []);
+  assert.deepEqual(audit.rejectedNumbers, []);
+
+  const evaluated = evaluateAuditedReasoningResponse(
+    '<think>\nThe user greeted me casually. No telemetry dump is needed.\n\nKeep the tone concise and professional.\n</think>\nHello! How can I help with spacecraft fire safety today?',
+    'stop',
+    params,
+    telemetry,
+    matched,
+    'nasa-psi',
+  );
+  assert.equal(
+    evaluated.auditedText,
+    'Hello! How can I help with spacecraft fire safety today?',
+  );
+  assert.equal(evaluated.reasoningFailedValidation, false);
+
+  const nodes = parseThinkSteps(evaluated.reasoningPath);
+  assert.equal(nodes.length, 2);
+  assert.equal(nodes[0].id, 'think-0');
+  assert.equal(nodes[0].label, 'The user greeted me casually. No telemetry dump is needed.');
+  assert.equal(nodes[1].label, 'Keep the tone concise and professional.');
+});
+
+test('parseThinkSteps and extractThoughtAndAnswer strip all emojis from reasoning nodes and assistant text', () => {
+  const raw = '<think>🔍 Step one: check flow.\n- 🔥 Step two: verify quench.</think>\nHello there! 🚀';
+  const extracted = extractThoughtAndAnswer(raw);
+  assert.equal(extracted.answer, 'Hello there!');
+  const nodes = parseThinkSteps(extracted.reasoningPath);
+  assert.equal(nodes.length, 2);
+  assert.equal(nodes[0].label, 'Step one: check flow.');
+  assert.equal(nodes[1].label, 'Step two: verify quench.');
+});
+
+test('greetings bypass quickRuleMatch for WebLLM and return a conversational reply in deterministic fallback without dumping telemetry', () => {
+  const params = MISSION_PRESETS[0].params;
+  const telemetry = computeThermoTelemetry(params);
+  const matched = matchClosestExperiment(params, experiments);
+
+  assert.equal(
+    quickRuleMatch('hello there', params, telemetry, matched, 'nasa-psi'),
+    null,
+  );
+
+  const fallbackGreeting = buildGroundedChatAnswer(
+    'hello there',
+    params,
+    telemetry,
+    matched,
+    'nasa-psi',
+  );
+  assert.ok(fallbackGreeting.includes('Ignimetheus Spacecraft Fire Safety Officer'));
+  assert.ok(!fallbackGreeting.includes('Live Telemetry Assessment'));
+  assert.ok(!fallbackGreeting.includes('101.3'));
+});

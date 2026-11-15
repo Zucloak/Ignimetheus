@@ -30,6 +30,7 @@ interface CombustionDuctCanvasProps {
   telemetry: ThermoTelemetry;
   unitSystem: UnitSystem;
   isPlaying: boolean;
+  isModelLoading?: boolean;
   showStreamlines: boolean;
   showVectors: boolean;
   showContours: boolean;
@@ -301,6 +302,7 @@ export const CombustionDuctCanvas: React.FC<CombustionDuctCanvasProps> = ({
   telemetry,
   unitSystem,
   isPlaying,
+  isModelLoading = false,
   showStreamlines,
   showVectors,
   showContours,
@@ -343,6 +345,7 @@ export const CombustionDuctCanvas: React.FC<CombustionDuctCanvasProps> = ({
       show1gOverlay,
     },
     isPlaying,
+    isModelLoading,
     combustionState: telemetry.chamberState,
     burnLengthMm: telemetry.burnLengthMm,
     igniterPulseActive: telemetry.igniterPowerW > 0,
@@ -372,6 +375,7 @@ export const CombustionDuctCanvas: React.FC<CombustionDuctCanvasProps> = ({
       show1gOverlay,
     },
     isPlaying,
+    isModelLoading,
     combustionState: telemetry.chamberState,
     burnLengthMm: telemetry.burnLengthMm,
     igniterPulseActive: telemetry.igniterPowerW > 0,
@@ -391,14 +395,14 @@ export const CombustionDuctCanvas: React.FC<CombustionDuctCanvasProps> = ({
   const dirtyRef = useRef(true);
   const scheduleRenderRef = useRef<() => void>(() => {});
   dirtyRef.current = true;
-  if (!isPlaying) {
+  if (!isPlaying || isModelLoading) {
     scheduleRenderRef.current();
   }
 
   useEffect(() => {
     dirtyRef.current = true;
     scheduleRenderRef.current();
-  }, [isPlaying]);
+  }, [isPlaying, isModelLoading]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -470,7 +474,7 @@ export const CombustionDuctCanvas: React.FC<CombustionDuctCanvasProps> = ({
     const renderFrame = (now: number) => {
       rafId = 0;
       const s = renderStateRef.current;
-      const shouldAnimate = s.isPlaying;
+      const shouldAnimate = s.isPlaying && !s.isModelLoading;
 
       if (!dirtyRef.current && !shouldAnimate) {
         lastTs = now;
@@ -487,7 +491,7 @@ export const CombustionDuctCanvas: React.FC<CombustionDuctCanvasProps> = ({
       const dt = Math.min(0.05, Math.max(0.001, (now - lastTs) / 1000));
       lastTs = now;
 
-      if (s.isPlaying) {
+      if (shouldAnimate) {
         simTime += dt;
         const diff = s.telemetry.flameScale - displayFlameScale;
         if (Math.abs(diff) < 0.002) {
@@ -716,7 +720,7 @@ export const CombustionDuctCanvas: React.FC<CombustionDuctCanvasProps> = ({
             n2DischargeActive,
           );
 
-          if (s.isPlaying) {
+          if (shouldAnimate) {
             const dxNorm =
               (effectiveAdvanceSpeed * field.parabolic * field.uMultiplier * t.speedJitter * dt) / chamberWidth;
             t.x += dxNorm;
@@ -1171,7 +1175,7 @@ export const CombustionDuctCanvas: React.FC<CombustionDuctCanvasProps> = ({
             ctx.save();
             ctx.globalCompositeOperation = 'screen';
             for (const emb of embers) {
-              if (s.isPlaying) {
+              if (shouldAnimate) {
                 emb.age += dt;
                 if (emb.age >= emb.maxAge || emb.x > 1.01) {
                   emb.age = 0;
@@ -1747,7 +1751,7 @@ export const CombustionDuctCanvas: React.FC<CombustionDuctCanvasProps> = ({
 
       ctx.restore();
 
-      if (s.isPlaying) {
+      if (shouldAnimate) {
         scheduleRender();
       }
     };
@@ -1860,6 +1864,7 @@ export const CombustionDuctCanvas: React.FC<CombustionDuctCanvasProps> = ({
       <canvas
         ref={canvasRef}
         data-testid="combustion-duct-canvas"
+        data-paused-for-model-load={isModelLoading ? 'true' : 'false'}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         onClick={handleCanvasClick}

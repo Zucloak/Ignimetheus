@@ -48,6 +48,7 @@ interface SimulationStageProps {
   leftSidebarOpen: boolean;
   rightInspectorOpen: boolean;
   isPlaying: boolean;
+  isModelLoading?: boolean;
   showStreamlines: boolean;
   showVectors: boolean;
   showContours: boolean;
@@ -122,6 +123,7 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
   leftSidebarOpen,
   rightInspectorOpen,
   isPlaying,
+  isModelLoading = false,
   showStreamlines,
   showVectors,
   showContours,
@@ -369,6 +371,7 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
           telemetry={telemetry}
           unitSystem={unitSystem}
           isPlaying={isPlaying}
+          isModelLoading={isModelLoading}
           showStreamlines={showStreamlines}
           showVectors={showVectors}
           showContours={showContours}
@@ -667,6 +670,7 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
                 telemetry={telemetry}
                 unitSystem={unitSystem}
                 isPlaying={isPlaying}
+                isModelLoading={isModelLoading}
                 showStreamlines={showStreamlines}
                 showVectors={showVectors}
                 showContours={showContours}

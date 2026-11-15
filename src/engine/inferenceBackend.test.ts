@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  COMPILING_SHADERS_LABEL,
   formatComposerBackendStatus,
+  formatLoadProgressNote,
   getSelectedEngineLabel,
   isWorkerSandboxError,
   WEBGPU_IFRAME_DISABLED_NOTE,
@@ -26,6 +28,14 @@ test('formatComposerBackendStatus shows download/compile progress and ready stat
     label: 'Loading Qwen2.5-1.5B · 48%',
     dotColor: 'amber',
   });
+  assert.deepEqual(formatComposerBackendStatus('webgpu', 'loading', 99), {
+    label: COMPILING_SHADERS_LABEL,
+    dotColor: 'amber',
+  });
+  assert.deepEqual(formatComposerBackendStatus('webgpu', 'loading', 100), {
+    label: COMPILING_SHADERS_LABEL,
+    dotColor: 'amber',
+  });
   assert.deepEqual(formatComposerBackendStatus('webgpu', 'ready', 100), {
     label: 'WebGPU Ready',
     dotColor: 'cyan',
@@ -34,6 +44,14 @@ test('formatComposerBackendStatus shows download/compile progress and ready stat
     label: 'Telemetry Grounded',
     dotColor: 'amber',
   });
+
+  const midLoad = formatLoadProgressNote(0.55, 'Qwen3-0.6B-q4f16_1-MLC');
+  assert.equal(midLoad.pct, 55);
+  assert.equal(midLoad.isCompilingShaders, false);
+
+  const shaderPhase = formatLoadProgressNote(0.99, 'Qwen3-0.6B-q4f16_1-MLC', 'Finish loading');
+  assert.equal(shaderPhase.note, COMPILING_SHADERS_LABEL);
+  assert.equal(shaderPhase.isCompilingShaders, true);
 });
 
 test('isWorkerSandboxError detects SecurityError and sandboxed iframe worker failures', () => {

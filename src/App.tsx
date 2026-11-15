@@ -740,6 +740,7 @@ export default function App() {
             leftSidebarOpen={leftOpen}
             rightInspectorOpen={rightOpen}
             isPlaying={isPlaying}
+            isModelLoading={safetyOfficer.isModelLoading}
             showStreamlines={showStreamlines}
             showVectors={showVectors}
             showContours={showContours}
