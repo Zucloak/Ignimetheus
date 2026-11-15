@@ -248,8 +248,8 @@ export function isQwen3ModelId(modelId: string | null | undefined): boolean {
 
 /**
  * Returns Qwen-approved non-greedy sampling parameters for Qwen3 reasoning models
- * (temperature 0.6, top_p 0.95, top_k 20, max_tokens >= 320) to prevent repetitive
- * thinking loops, or locked low-temperature sampling for Qwen2.5 Instruct models.
+ * (temperature 0.6, top_p 0.95, top_k 20, max_tokens 240) to prevent repetitive
+ * thinking loops and tighten latency, or locked low-temperature sampling for Qwen2.5 Instruct models.
  */
 export function getGenerationParamsForModel(
   modelId: string | null | undefined,
@@ -261,7 +261,7 @@ export function getGenerationParamsForModel(
       temperature: 0.6,
       top_p: 0.95,
       top_k: 20,
-      max_tokens: Math.max(320, baseMaxTokens),
+      max_tokens: 240,
       enableThinking: true,
     };
   }

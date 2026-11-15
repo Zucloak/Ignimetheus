@@ -560,7 +560,10 @@ export const NUMERIC_GUARDRAIL_INSTRUCTION =
 export const AUTHORITY_BOUNDARY_INSTRUCTION =
   'Never state that a condition is "safe", "unsafe", "within safe limits", "certified", "approved", "validated", or provide any "guarantee", never predict that a fire will extinguish, and never issue crew orders. If ChamberState is STANDBY, explicitly state it is not ignited yet and do not narrate an active flame. Wherever a PSI ID (PSI-nn) or DOI appears, append "(pending verification)".';
 
-export const CONVERSATIONAL_SAFETY_OFFICER_PROMPT = `You are the Ignimetheus Telemetry Assistant for a reduced-order 1D spacecraft fire-safety simulation. Explain the simulation clearly, concisely, and professionally in plain prose without emojis or bulleted data dumps. ${NUMERIC_GUARDRAIL_INSTRUCTION} ${AUTHORITY_BOUNDARY_INSTRUCTION}`;
+export const THINK_TRACE_CONCISE_INSTRUCTION =
+  'Keep <think> traces under 3 short sentences.';
+
+export const CONVERSATIONAL_SAFETY_OFFICER_PROMPT = `You are the Ignimetheus Telemetry Assistant for a reduced-order 1D spacecraft fire-safety simulation. Explain the simulation clearly, concisely, and professionally in plain prose without emojis or bulleted data dumps. ${THINK_TRACE_CONCISE_INSTRUCTION} ${NUMERIC_GUARDRAIL_INSTRUCTION} ${AUTHORITY_BOUNDARY_INSTRUCTION}`;
 
 export function buildWebLlmPrompt(
   params: SimulationParams,
@@ -579,7 +582,7 @@ export function buildWebLlmPrompt(
 
   return [
     'You are the Ignimetheus Telemetry Assistant. Summarize the mitigation levers modeled in this simulation without emojis, crew commands, or judgment claims.',
-    `${NUMERIC_GUARDRAIL_INSTRUCTION} ${AUTHORITY_BOUNDARY_INSTRUCTION}`,
+    `${THINK_TRACE_CONCISE_INSTRUCTION} ${NUMERIC_GUARDRAIL_INSTRUCTION} ${AUTHORITY_BOUNDARY_INSTRUCTION}`,
     '[TELEMETRY]',
     `Telemetry: Material=${mat.name}, State=${formatFlameStateLabel(telemetry, manualExtinguish)}, O2=${telemetry.effectiveO2Percent.toFixed(1)}%, Pressure=${press.text} ${press.unit}, Flow=${vel.text} ${vel.unit} (${params.flowMode}), Gravity=${formatGravityOneUnit(params.gravityMs2)}.`,
     `Computed Regime=${telemetry.regime}, SpreadRate=${spread.text} ${spread.unit}, EffectiveLOI=${telemetry.effectiveLoiPercent.toFixed(1)}%, ExtinctionIndexDaStar=${telemetry.damkohlerNumber.toFixed(2)}, TotalHeatFlux=${flux.text} ${flux.unit}.`,
@@ -1727,6 +1730,13 @@ function isDualGravityComparisonQuery(q: string): boolean {
 }
 
 function hasWhatIfCueText(q: string): boolean {
+  // Analytical "what happens if / when ..." without concrete numeric delta or explicit hardware lever routes to EXPLAIN
+  if (
+    /\bwhat\s+happens\s+(?:if|when)\b/.test(q) &&
+    !/\d|\b(?:n2|nitrogen|baffle|arrestor|mesh)\b/.test(q)
+  ) {
+    return false;
+  }
   const hasCue =
     /\bwhat\s+if\b/.test(q) ||
     /\bwhat\s+(?:changes|happens)\b/.test(q) ||
@@ -1744,7 +1754,14 @@ function hasWhatIfCueText(q: string): boolean {
 }
 
 function isLiveValuesQueryText(q: string): boolean {
-  if (/^\s*(?:why|explain)\b/.test(q)) {
+  if (/^\s*(?:why|explain|compare|what\s+happens(?:\s+if|\s+when)?)\b/.test(q)) {
+    return false;
+  }
+  // Analytical "how ..." questions route to EXPLAIN unless specifically asking for a live value/conversion
+  if (
+    /^\s*how\s+(?:does|do|is|are|can|would|will)\b/.test(q) &&
+    !/\b(?:read|reads|reading|convert|much|many)\b/.test(q)
+  ) {
     return false;
   }
 
@@ -1768,7 +1785,7 @@ function isLiveValuesQueryText(q: string): boolean {
   if (isConceptualTermOnly) return false;
 
   return (
-    /\b(?:what(?:'s|\s+is|\s+are|\s+does|\s+do)|how\s+(?:do|does)|give\s+me|report|show|read|reads|reading|list|check|convert|value\s+of|current|live|tell\s+me|cite|inspect|analyze|recommend)\b/.test(
+    /\b(?:what(?:'s|\s+is|\s+are|\s+does|\s+do)|how\s+(?:much|many|fast)|give\s+me|report|show|read|reads|reading|list|check|convert|value\s+of|current|live|tell\s+me|cite|inspect|analyze|recommend)\b/.test(
       q,
     ) ||
     /@\b(?:p-\d+|d-\d+|tc-[1-6]|tc-?1\.\.6|saffire|bass|flex)\b/i.test(q)
@@ -1776,8 +1793,9 @@ function isLiveValuesQueryText(q: string): boolean {
 }
 
 /**
- * Requirement 10: Local WebGPU LLM is eligible ONLY for conceptual "why" or "explain" intents
- * when not already resolved by injection/authority/out-of-scope/smalltalk/about/glossary/values/what-if/compare.
+ * Local WebGPU LLM is eligible for analytical/comparative/explanatory intents ("why", "explain",
+ * "how", "compare", "what happens if") when not already resolved by injection/authority/out-of-scope/
+ * smalltalk/about/glossary/values/what-if/compare-0g-1g guardrails.
  */
 export function isWhyOrExplainIntent(question: string): boolean {
   const q = normalizeQuestionText(question);
@@ -1842,7 +1860,12 @@ export function classifyIntent(rawQuestion: string): SafetyIntent {
     ) ||
     /@|\btc-[1-6]\b|\bp-\d+\b|\bd-\d+\b|-\d{2}\b/.test(effectiveQ);
 
-  if (!asksLiveRun) {
+  const isAnalyticalOrComparative =
+    /\b(?:why|explain|compare|what\s+happens(?:\s+if|\s+when)?)\b/.test(effectiveQ) ||
+    (/^\s*how\s+(?:does|do|is|are|can|would|will)\b/.test(effectiveQ) &&
+      !/\b(?:read|reads|reading|convert|much|many)\b/.test(effectiveQ));
+
+  if (!asksLiveRun && !isAnalyticalOrComparative) {
     if (lookupGlossaryTerm(effectiveQ) !== null) {
       return 'GLOSSARY';
     }
@@ -1870,8 +1893,8 @@ export function classifyIntent(rawQuestion: string): SafetyIntent {
     return 'VALUES';
   }
 
-  // 8. EXPLAIN (conceptual "why" / "explain" about current run)
-  if (/\b(?:why|explain)\b/.test(effectiveQ)) {
+  // 8. EXPLAIN (analytical/comparative/explanatory "why", "explain", "how", "compare", "what happens if")
+  if (/\b(?:why|explain|how|compare|what\s+happens(?:\s+if|\s+when)?)\b/.test(effectiveQ)) {
     return 'EXPLAIN';
   }
 
@@ -2825,13 +2848,45 @@ function buildDatasetOrFeatureRuleAnswer(
     ].join('\n\n');
   }
 
-  if (/0\s*cm\/s|quench|radiative|spherical|stagnant|shutdown|no flow|zero flow/.test(q)) {
+  if (
+    /0\s*cm\/s|quench|extinction|extinguished|(?:why|how|explain)\b.*\bextinguish|radiative|spherical|stagnant|shutdown|no flow|zero flow/.test(
+      q,
+    )
+  ) {
+    const flowVelocityCms = msToCms(params.flowVelocityMs);
+    const isQuiescentFlow = flowVelocityCms <= 1.0;
+    const isManualSuppression =
+      manualExtinguish &&
+      (telemetry.chamberState === 'SELF_EXTINGUISHED' || stateLabel === 'Extinguished (manual)');
+    const marginSign = telemetry.loiMarginPercent >= 0 ? '+' : '';
+    const underlyingMetrics = `Effective LOI=${telemetry.effectiveLoiPercent.toFixed(1)}%, LOI margin=${marginSign}${telemetry.loiMarginPercent.toFixed(1)}%, radiative flux=${radFlux.text} ${radFlux.unit} vs convective=${convFlux.text} ${convFlux.unit}`;
+    const stateFooter = isStandby
+      ? `Current chamber (${mat.shortName}, ${telemetry.effectiveO2Percent.toFixed(1)}% O2, ${vel.text} ${vel.unit}): not ignited yet — ambient ${temp.text}${temp.unit}. Closest Reference Scenario (Adapted): ${exp.id} (${formatPsiCitation(exp.psiCitation)}).`
+      : `Current state (${mat.shortName}, ${stateLabel}, ${telemetry.effectiveO2Percent.toFixed(1)}% O2, ${vel.text} ${vel.unit}): Regime=${telemetry.regime}, Peak=${temp.text}${temp.unit}. Closest Reference Scenario (Adapted): ${exp.id} (${formatPsiCitation(exp.psiCitation)}).`;
+
+    if (isManualSuppression) {
+      const flowContextClause = isQuiescentFlow
+        ? `under quiescent 0 cm/s diffusion-limited transport (${vel.text} ${vel.unit}, residence time Da*=${telemetry.damkohlerNumber.toFixed(2)}, ${gravStr})`
+        : `at active forced flow velocity ${vel.text} ${vel.unit} (${flowVelocityCms.toFixed(1)} cm/s, ${params.flowMode}) and residence time Da*=${telemetry.damkohlerNumber.toFixed(2)} (${gravStr})`;
+      return [
+        `Combustion was terminated by manual suppression (Extinguished (manual)) rather than natural radiative quenching ${flowContextClause}.`,
+        `Underlying thermal-oxygen metrics at suppression: ${underlyingMetrics}.`,
+        stateFooter,
+      ].join('\n\n');
+    }
+
+    if (isQuiescentFlow) {
+      return [
+        `At quiescent 0 cm/s in microgravity (${vel.text} ${vel.unit}), natural buoyancy vanishes (${gravStr} gives ${formatVelocity(telemetry.buoyantVelocityMs, unitSystem).text} ${vel.unit} buoyant velocity), so oxygen transport depends on molecular diffusion (diffusion-limited extinction, residence time Da*=${telemetry.damkohlerNumber.toFixed(2)}).`,
+        `Because radiative cooling drains energy while low-momentum diffusion limits O2 supply, the solver applies a low-flow radiative LOI shift (${underlyingMetrics}).`,
+        stateFooter,
+      ].join('\n\n');
+    }
+
     return [
-      `At quiescent 0 cm/s in microgravity, natural buoyancy vanishes (${gravStr} gives ${formatVelocity(telemetry.buoyantVelocityMs, unitSystem).text} ${vel.unit} buoyant velocity), so oxygen transport depends on molecular diffusion.`,
-      `Because radiative cooling drains energy while low-momentum diffusion limits O2 supply, the solver applies a low-flow radiative LOI shift (effective LOI=${telemetry.effectiveLoiPercent.toFixed(1)}%, margin ${telemetry.loiMarginPercent >= 0 ? '+' : ''}${telemetry.loiMarginPercent.toFixed(1)}%, radiative flux=${radFlux.text} ${radFlux.unit} vs convective=${convFlux.text} ${convFlux.unit}).`,
-      isStandby
-        ? `Current chamber (${mat.shortName}, ${telemetry.effectiveO2Percent.toFixed(1)}% O2, ${vel.text} ${vel.unit}): not ignited yet — ambient ${temp.text}${temp.unit}. Closest Reference Scenario (Adapted): ${exp.id} (${formatPsiCitation(exp.psiCitation)}).`
-        : `Current state (${mat.shortName}, ${stateLabel}, ${telemetry.effectiveO2Percent.toFixed(1)}% O2, ${vel.text} ${vel.unit}): Regime=${telemetry.regime}, Peak=${temp.text}${temp.unit}. Closest Reference Scenario (Adapted): ${exp.id} (${formatPsiCitation(exp.psiCitation)}).`,
+      `At active forced flow velocity ${vel.text} ${vel.unit} (${flowVelocityCms.toFixed(1)} cm/s, ${params.flowMode}) and residence time Da*=${telemetry.damkohlerNumber.toFixed(2)} (${gravStr}, buoyant velocity ${formatVelocity(telemetry.buoyantVelocityMs, unitSystem).text} ${vel.unit}), convective oxidizer transport governs the boundary layer rather than quiescent diffusion-limited extinction.`,
+      `Evaluated thermal-oxygen balance at active forced flow (${flowVelocityCms.toFixed(1)} cm/s, Da*=${telemetry.damkohlerNumber.toFixed(2)}): ${underlyingMetrics}.`,
+      stateFooter,
     ].join('\n\n');
   }
 
@@ -2940,16 +2995,23 @@ function buildPreIgnitionQuenchReply(
 ): string {
   const mat = MATERIALS[params.materialId];
   const vel = formatVelocity(params.flowVelocityMs, unitSystem);
+  const flowVelocityCms = msToCms(params.flowVelocityMs);
+  const radFlux = formatHeatFlux(telemetry.radiativeHeatFluxWm2, unitSystem);
+  const convFlux = formatHeatFlux(telemetry.convectiveHeatFluxWm2, unitSystem);
   const steadyEval = computeThermoTelemetry(params);
   const willSustain = canSustainCombustion(params, steadyEval);
   const loiMarginStr = `${telemetry.loiMarginPercent >= 0 ? '+' : ''}${telemetry.loiMarginPercent.toFixed(1)}% O2 (effective LOI ${telemetry.effectiveLoiPercent.toFixed(1)}%)`;
   const spreadEval = formatSpreadRate(steadyEval.flameSpreadRateMs, unitSystem);
+  const flowTransportClause =
+    flowVelocityCms <= 1.0
+      ? `quiescent 0 cm/s diffusion-limited transport (${vel.text} ${vel.unit}, Da*=${steadyEval.damkohlerNumber.toFixed(2)})`
+      : `active forced flow ${vel.text} ${vel.unit} (${flowVelocityCms.toFixed(1)} cm/s, residence time Da*=${steadyEval.damkohlerNumber.toFixed(2)})`;
   const implication = willSustain
-    ? `If ignited at these settings, the positive LOI margin implies sustained propagation (${steadyEval.regime}, predicted spread ${spreadEval.text} ${spreadEval.unit}, Da*=${steadyEval.damkohlerNumber.toFixed(2)}).`
-    : `If ignited at these settings, the LOI margin implies the flame will quench after the ${IGNITION_PULSE_DURATION_S.toFixed(1)}s ignition pulse (${steadyEval.regime}, Da*=${steadyEval.damkohlerNumber.toFixed(2)}).`;
+    ? `If ignited at these settings (${flowTransportClause}), the positive LOI margin implies sustained propagation (${steadyEval.regime}, predicted spread ${spreadEval.text} ${spreadEval.unit}, Da*=${steadyEval.damkohlerNumber.toFixed(2)}).`
+    : `If ignited at these settings (${flowTransportClause}), the LOI margin implies the flame will quench after the ${IGNITION_PULSE_DURATION_S.toFixed(1)}s ignition pulse (${steadyEval.regime}, Da*=${steadyEval.damkohlerNumber.toFixed(2)}).`;
   return [
     `Chamber is not ignited yet on ${mat.shortName}, so no active quench or propagation has occurred.`,
-    `- Current Settings: LOI margin ${loiMarginStr}, Flow ${vel.text} ${vel.unit} (${params.flowMode}), O2 ${telemetry.effectiveO2Percent.toFixed(1)}%.`,
+    `- Current Settings: LOI margin ${loiMarginStr}, Flow ${vel.text} ${vel.unit} (${params.flowMode}), O2 ${telemetry.effectiveO2Percent.toFixed(1)}%, radiative flux ${radFlux.text} ${radFlux.unit} vs convective ${convFlux.text} ${convFlux.unit}.`,
     `- Ignition Implication: ${implication}`,
   ].join('\n');
 }
@@ -3090,6 +3152,23 @@ export function quickRuleMatch(
       )
     ) {
       return buildPreIgnitionQuenchReply(params, telemetry, unitSystem);
+    }
+    if (
+      manualExtinguish &&
+      telemetry.chamberState === 'SELF_EXTINGUISHED' &&
+      /\b(?:quench|quenched|extinguish|extinguished|extinction|radiative|0\s*cm\/s|no\s+flow|zero\s+flow)\b/.test(
+        effectiveQ,
+      )
+    ) {
+      return buildDatasetOrFeatureRuleAnswer(
+        effectiveQ,
+        params,
+        telemetry,
+        matched,
+        unitSystem,
+        markers,
+        manualExtinguish,
+      );
     }
     if (/\b(?:orion|artemis|saffire|bass|flex|nasa-std-6001|std-?6001|mitigat|suppress|arrestor|baffle|blow-?off)\b/.test(effectiveQ)) {
       return buildDatasetOrFeatureRuleAnswer(

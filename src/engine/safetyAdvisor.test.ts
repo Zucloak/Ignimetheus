@@ -613,3 +613,109 @@ test('greetings bypass quickRuleMatch and WebLLM, returning deterministic conver
   assert.ok(!fallbackGreeting.includes('Live Telemetry Assessment'));
   assert.ok(!fallbackGreeting.includes('101.3'));
 });
+
+test('condition-aware quench explanation distinguishes manual suppression, quiescent <=1.0 cm/s diffusion extinction, and active forced flow >1.0 cm/s', () => {
+  // 1. Quiescent 0 cm/s (flowVelocityCms <= 1.0)
+  const quiescentParams = MISSION_PRESETS[2].params; // 0 cm/s
+  const quiescentTelemetry = computeThermoTelemetry(quiescentParams);
+  const quiescentMatched = matchClosestReferenceForParams(quiescentParams, experiments, quiescentTelemetry);
+  const quiescentAns = buildGroundedChatAnswer(
+    'Why did the flame quench?',
+    quiescentParams,
+    quiescentTelemetry,
+    quiescentMatched,
+    'nasa-psi',
+  );
+  assert.ok(quiescentAns.includes('quiescent 0 cm/s'), 'Expected quiescent 0 cm/s description when flow <= 1.0 cm/s');
+  assert.ok(quiescentAns.includes('diffusion-limited'), 'Expected diffusion-limited description when flow <= 1.0 cm/s');
+  assert.ok(quiescentAns.includes('Effective LOI='));
+  assert.ok(quiescentAns.includes('LOI margin='));
+  assert.ok(quiescentAns.includes('radiative flux='));
+  assert.ok(quiescentAns.includes('convective='));
+
+  // 2. Active forced flow > 1.0 cm/s (15.0 cm/s) without manual suppression
+  const forcedParams = MISSION_PRESETS[0].params; // 15 cm/s
+  const forcedBurningChamber = getInitialChamberForParams(forcedParams);
+  const forcedTelemetry = computeThermoTelemetry(forcedParams, forcedBurningChamber);
+  const forcedMatched = matchClosestReferenceForParams(forcedParams, experiments, forcedTelemetry);
+  const forcedAns = buildGroundedChatAnswer(
+    'Why does radiative quenching occur in this flow?',
+    forcedParams,
+    forcedTelemetry,
+    forcedMatched,
+    'nasa-psi',
+  );
+  assert.ok(
+    !forcedAns.includes('At quiescent 0 cm/s'),
+    'Should not describe active 15 cm/s run as quiescent 0 cm/s',
+  );
+  assert.ok(forcedAns.includes('15.0 cm/s'), 'Expected active forced flow velocity (15.0 cm/s)');
+  assert.ok(
+    forcedAns.includes(`Da*=${forcedTelemetry.damkohlerNumber.toFixed(2)}`),
+    'Expected residence time Da* in forced flow quench explanation',
+  );
+  assert.ok(forcedAns.includes('Effective LOI='));
+  assert.ok(forcedAns.includes('LOI margin='));
+  assert.ok(forcedAns.includes('radiative flux='));
+  assert.ok(forcedAns.includes('convective='));
+
+  // 3. Manual suppression (flameState EXTINGUISHED due to manualExtinguish = true -> Extinguished (manual))
+  const manualExtChamber = {
+    ...forcedBurningChamber,
+    state: 'SELF_EXTINGUISHED' as const,
+    igniterRemainingS: 0,
+  };
+  const manualExtTelemetry = computeThermoTelemetry(forcedParams, manualExtChamber);
+  assert.equal(manualExtTelemetry.chamberState, 'SELF_EXTINGUISHED');
+  const manualAns = buildGroundedChatAnswer(
+    'Why is the flame quenched / extinguished?',
+    forcedParams,
+    manualExtTelemetry,
+    forcedMatched,
+    'nasa-psi',
+    [],
+    true,
+  );
+  assert.ok(
+    manualAns.includes('terminated by manual suppression (Extinguished (manual)) rather than natural radiative quenching'),
+    'Expected explicit manual suppression statement instead of natural radiative quenching',
+  );
+  assert.ok(manualAns.includes(`Effective LOI=${manualExtTelemetry.effectiveLoiPercent.toFixed(1)}%`));
+  assert.ok(manualAns.includes('LOI margin='));
+  assert.ok(manualAns.includes('radiative flux='));
+  assert.ok(manualAns.includes('convective='));
+  assert.ok(manualAns.includes('15.0 cm/s'));
+  assert.ok(manualAns.includes(`Da*=${manualExtTelemetry.damkohlerNumber.toFixed(2)}`));
+});
+
+test('analytical and comparative questions ("how", "compare", "what happens if", "why") route to EXPLAIN with concise <think> instruction while preserving guardrails', () => {
+  const params = MISSION_PRESETS[0].params;
+  const burningChamber = getInitialChamberForParams(params);
+  const telemetry = computeThermoTelemetry(params, burningChamber);
+  const matched = matchClosestReferenceForParams(params, experiments, telemetry);
+
+  for (const analyticalPrompt of [
+    'Why does forced flow lower the effective LOI in microgravity?',
+    'How does microgravity alter boundary-layer oxygen transport?',
+    'Compare opposed and concurrent flow flame spread mechanisms.',
+    'What happens if radiative heat loss dominates near the quenching limit?',
+  ]) {
+    assert.equal(
+      isWhyOrExplainIntent(analyticalPrompt),
+      true,
+      `Expected analytical prompt to route to EXPLAIN: ${analyticalPrompt}`,
+    );
+  }
+
+  for (const sysPrompt of [
+    buildLiveContextSystemPrompt(params, telemetry, matched, 'nasa-psi'),
+    buildTieredSystemPrompt(params, telemetry, matched, 'nasa-psi', 'compact'),
+    buildTieredSystemPrompt(params, telemetry, matched, 'nasa-psi', 'standard'),
+  ]) {
+    assert.ok(
+      sysPrompt.includes('Keep <think> traces under 3 short sentences.'),
+      'Expected concise <think> trace instruction in system prompt',
+    );
+  }
+});
+
