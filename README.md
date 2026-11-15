@@ -104,7 +104,7 @@ The onboard Telemetry Assistant (`src/hooks/useSafetyOfficerLLM.ts`, `src/engine
 
 ## 6. Demo and Screenshots
 
-- **Live Demo**: `[DEMO_URL]`
+- **Live Demo**: `https://ignimetheus.pages.dev/demo`
 - **Screenshots**: `[SCREENSHOTS]`
 - **Offline Usage**: Local model weights download once; load online first, then it works offline.
 
@@ -142,7 +142,8 @@ npm run build
 
 ## 8. AI Assistance and Data Disclosure
 
-[AI_DISCLOSURE_TEXT]
+AI Assistance Disclosure
+Code was written with AI coding assistants (Gemini and Claude) under the author's direction; the author ran the tests and checked results against NASA sources. Submission text and documentation were drafted with AI and edited by the author. Early reference-data entries drafted with AI were later replaced or relabelled against NASA's published table. The app embeds open-weight local models (Qwen) that phrase explanations; every figure comes from the solver.
 
 ---
 
