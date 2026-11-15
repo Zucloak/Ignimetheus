@@ -1,8 +1,8 @@
 {
   "name": "ignimetheus",
   "private": true,
-  "version": "0.0.0",
-  "description": "Reduced-order 1D SI thermo-fluids digital twin for spacecraft fire safety",
+  "version": "0.1.0",
+  "description": "An offline, reduced-order flame-spread simulator for exploring how oxygen, flow, pressure and gravity affect fires in spacecraft. A screening and teaching tool, not validated for design, certification or crew-safety decisions.",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {

@@ -36,9 +36,10 @@ export const ModelVsNasaCard: React.FC<ModelVsNasaCardProps> = ({
 
   if (!c) return null;
 
+  const isAdaptedUnverified = c.role === 'Adapted Reference (unverified)';
   const scaleMax = Math.max(c.nasaSpreadMmS, c.modelSpreadMmS, 0.5);
   const bars = [
-    ['NASA', c.nasaSpreadText, c.nasaSpreadMmS, 'bg-[#71717A]', 'model-vs-nasa-bar-nasa'],
+    [isAdaptedUnverified ? 'Adapted ref (unverified)' : 'NASA', c.nasaSpreadText, c.nasaSpreadMmS, 'bg-[#71717A]', 'model-vs-nasa-bar-nasa'],
     ['model', c.modelSpreadText, c.modelSpreadMmS, 'bg-[#E4E4E7]', 'model-vs-nasa-bar-model'],
   ] as const;
 
@@ -100,7 +101,7 @@ export const ModelVsNasaCard: React.FC<ModelVsNasaCardProps> = ({
 
           <div data-testid={c.isExtinctionCheck ? 'model-vs-nasa-extinction-outcomes' : undefined} className={GRID2}>
             <div className={BOX}>
-              <div className={LBL}>NASA published</div>
+              <div className={LBL}>{isAdaptedUnverified ? 'Adapted Reference (unverified)' : 'NASA published'}</div>
               <div
                 data-testid={c.isExtinctionCheck ? 'model-vs-nasa-nasa-outcome' : 'model-vs-nasa-nasa-value'}
                 className={`mt-0.5 ${c.isExtinctionCheck ? 'text-xs' : 'font-mono text-sm tabular-nums'} font-semibold text-[#E4E4E7]`}

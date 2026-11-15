@@ -729,7 +729,17 @@ test('Task 2: Dataset provenance metadata, Urban et al. (2017) Table 1 Saffire r
       assert.equal(exp.psiInvestigationId, 'PSI-25');
       assert.equal(exp.doi, '10.60555/4qc4-de67');
       assert.equal(exp.provenanceTag, 'Adapted Reference');
-      assert.equal(exp.verificationStatus, 'pending_verification');
+      if (exp.id === 'BASS-II-14') {
+        assert.equal(exp.verificationStatus, 'Adapted Reference (unverified)');
+        const fields = exp.provenance.fields as Record<string, string>;
+        assert.equal(fields.psiInvestigationId, 'verified');
+        assert.equal(fields.doi, 'verified');
+        assert.equal(fields.license, 'verified');
+        assert.equal(fields.observedBurnLengthMm, 'adapted/unverified');
+        assert.equal(fields.observedSpreadRateMmS, 'adapted/unverified');
+      } else {
+        assert.equal(exp.verificationStatus, 'pending_verification');
+      }
     } else if (exp.program === 'FLEX') {
       assert.equal(exp.psiInvestigationId, 'PSI-69');
       assert.equal(exp.doi, '10.60555/mbq8-0451');

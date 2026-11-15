@@ -1,6 +1,6 @@
 {
   "name": "Ignimetheus",
-  "description": "Reduced-order SI thermo-fluids digital twin for spacecraft fire safety with offline WebGPU telemetry auditing",
+  "description": "An offline, reduced-order flame-spread simulator for exploring how oxygen, flow, pressure and gravity affect fires in spacecraft. A screening and teaching tool, not validated for design, certification or crew-safety decisions.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

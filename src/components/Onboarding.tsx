@@ -222,7 +222,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                   <strong className="text-[#E4E4E7]">Held-out checks:</strong> SAFFIRE-II-07 (Nomex) and SAFFIRE-II-01 (silicone) predict self-extinguishment (0.00 mm/s simulated).
                 </li>
                 <li>
-                  <strong className="text-[#E4E4E7]">Scope:</strong> Not calibrated on BASS-II rods, FLEX droplets, or NASA-STD-6001 flame heights; not validated for design or certification.
+                  <strong className="text-[#E4E4E7]">Scope:</strong> Not calibrated on BASS-II rods (BASS-II-14 values are Adapted Reference (unverified) and excluded from headline error metrics), FLEX droplets, or NASA-STD-6001 flame heights; not validated for design or certification.
                 </li>
               </ul>
               <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 border-t border-[#1F1F24] pt-2.5">

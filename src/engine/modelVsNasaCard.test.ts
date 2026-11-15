@@ -152,19 +152,25 @@ test('ModelVsNasaCard never renders burn length and keeps held-out MAE computed 
   assert.equal(computeHeldOutMeanAbsoluteErrorPct(withoutHeldOut), null);
 });
 
-test('BASS-II-14 shows Adapted reference (unverified) badge with no error percentage styling', () => {
+test('BASS-II-14 shows Adapted Reference (unverified) badge with no error percentage styling', () => {
   const bass14 = BY_ID.get('BASS-II-14')!;
   const html = renderCardHtml(bass14);
   const text = decodeHtml(html);
 
   assert.ok(text.includes('BASS-II-14'));
-  assert.ok(text.includes('Adapted reference (unverified)'));
+  assert.ok(text.includes('Adapted Reference (unverified)'));
+  assert.equal(text.includes('(pending verification)'), false);
   assert.ok(text.includes('1.22 mm/s'));
   assert.ok(text.includes('1.824 mm/s'));
   assert.equal(html.includes('model-vs-nasa-error-ratio'), false);
   assert.equal(/49\.5%|1\.49x|1\.50x/.test(text), false);
   assert.equal(/\b(?:bg|text|border)-(?:red|rose|green|emerald|amber)-/i.test(html), false);
   assert.equal(/112\s*mm/.test(text), false);
+
+  const cmp = computeExperimentComparison(bass14)!;
+  assert.equal(cmp.role, 'Adapted Reference (unverified)');
+  assert.equal(cmp.signedErrorPct, null);
+  assert.equal(cmp.signedErrorText, null);
 });
 
 test('switching records leaves no stale values and card renders nothing for FLEX and STD-6001 records', () => {

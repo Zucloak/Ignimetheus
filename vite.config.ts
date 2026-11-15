@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
         manifest: {
           id: '/',
-          name: 'Ignimetheus — Spacecraft Fire Safety Digital Twin',
+          name: 'Ignimetheus: Flame in Freefall',
           short_name: 'Ignimetheus',
-          description: 'Reduced-order SI thermo-fluids digital twin for spacecraft fire safety with offline WebGPU telemetry auditing.',
+          description: 'An offline, reduced-order flame-spread simulator for exploring how oxygen, flow, pressure and gravity affect fires in spacecraft. A screening and teaching tool, not validated for design, certification or crew-safety decisions.',
           theme_color: '#09090B',
           background_color: '#09090B',
           display: 'standalone',
@@ -44,6 +44,8 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          cacheId: 'ignimetheus-v2',
+          cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json}'],
           maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
         },

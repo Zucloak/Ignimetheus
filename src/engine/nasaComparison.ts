@@ -27,7 +27,7 @@ export type ExperimentComparisonRole =
   | 'Fitted (not a test)'
   | 'Held-out'
   | 'Extinction check (calibration-informed)'
-  | 'Adapted reference (unverified)';
+  | 'Adapted Reference (unverified)';
 
 export interface ExperimentComparisonResult {
   experiment: NasaPsiExperiment;
@@ -78,7 +78,7 @@ export function getExperimentComparisonRole(exp: NasaPsiExperiment): ExperimentC
     if (exp.observedSpreadRateMmS === 0) return 'Extinction check (calibration-informed)';
     return Math.abs(exp.flowVelocityMs - 0.2) < 0.001 ? 'Fitted (not a test)' : 'Held-out';
   }
-  return 'Adapted reference (unverified)';
+  return 'Adapted Reference (unverified)';
 }
 
 export function computeExperimentComparison(exp: NasaPsiExperiment): ExperimentComparisonResult | null {
@@ -92,7 +92,7 @@ export function computeExperimentComparison(exp: NasaPsiExperiment): ExperimentC
   const nasaSpreadText = `${nasaSpreadMmS.toFixed(2)} mm/s`;
   const modelSpreadText = `${modelSpreadMmS.toFixed(3)} mm/s`;
   const gRatio = ms2ToG(exp.gravityMs2);
-  const showError = !isExtinctionCheck && role !== 'Adapted reference (unverified)' && nasaSpreadMmS > 0;
+  const showError = !isExtinctionCheck && role !== 'Adapted Reference (unverified)' && nasaSpreadMmS > 0;
   const signedErrorPct = showError ? ((modelSpreadMmS - nasaSpreadMmS) / nasaSpreadMmS) * 100 : null;
 
   return {
@@ -103,7 +103,9 @@ export function computeExperimentComparison(exp: NasaPsiExperiment): ExperimentC
     sourceLine:
       exp.program === 'Saffire-II'
         ? NASA_PUBLISHED_SOURCE_LINE
-        : exp.sourceCitation ?? 'NASA PSI adapted reference (pending verification)',
+        : exp.id === 'BASS-II-14'
+          ? 'PSI-25 (DOI 10.60555/4qc4-de67, CC0-1.0) · Value: Adapted Reference (unverified; not in NASA/TM-20210011385 or PSI-25 tables)'
+          : exp.sourceCitation ?? 'NASA PSI adapted reference (pending verification)',
     nasaSpreadMmS,
     nasaSpreadText,
     modelSpreadMmS,

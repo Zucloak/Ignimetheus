@@ -153,7 +153,8 @@ test('grounded chat responder resolves @TC-1..6, @SAFFIRE-II-07, @SAFFIRE-II-03 
   const bassAns = buildGroundedChatAnswer('Cite @BASS-II-14', params, telemetry, matched, 'nasa-psi');
   assert.ok(bassAns.includes('BASS-II-14'));
   assert.ok(bassAns.includes('1.22 mm/s'));
-  assert.ok(bassAns.includes('(pending verification)'));
+  assert.ok(bassAns.includes('Adapted Reference (unverified)'));
+  assert.ok(!bassAns.includes('(pending verification)'));
 
   const flexAns = buildGroundedChatAnswer('Explain @FLEX', params, telemetry, matched, 'nasa-psi');
   assert.ok(flexAns.includes('FLEX'));
@@ -392,12 +393,25 @@ test('matchClosestReferenceForParams excludes out-of-scope FLEX records for soli
   assert.equal(dropletMatch.experiment.program, 'FLEX');
 });
 
-test('PSI IDs and DOIs always include (pending verification)', () => {
-  assert.ok(formatPsiCitation('NASA PSI-25 / BASS-II').includes('(pending verification)'));
+test('PSI-25 / DOI 10.60555/4qc4-de67 omits (pending verification) while PSI-98, PSI-99, PSI-100, and PSI-69 retain (pending verification)', () => {
+  assert.equal(formatPsiCitation('NASA PSI-25 / BASS-II').includes('(pending verification)'), false);
+  assert.equal(formatPsiCitation('DOI 10.60555/4qc4-de67').includes('(pending verification)'), false);
   assert.ok(formatPsiCitation('DOI 10.60555/2e0d-9d0a').includes('(pending verification)'));
+  assert.ok(formatPsiCitation('NASA PSI-98').includes('(pending verification)'));
+  assert.ok(formatPsiCitation('NASA PSI-99').includes('(pending verification)'));
+  assert.ok(formatPsiCitation('NASA PSI-69').includes('(pending verification)'));
   for (const exp of experiments) {
     const formatted = formatExperimentPsiAndDoi(exp);
-    if (exp.psiInvestigationId || exp.doi || /PSI-\d+|10\.\d{4,9}\//.test(exp.psiCitation)) {
+    if (
+      exp.doi === '10.60555/4qc4-de67' &&
+      (exp.psiInvestigationId === 'PSI-25' || exp.psiInvestigationId === 'NASA-STD-6001B')
+    ) {
+      assert.equal(
+        formatted.includes('(pending verification)'),
+        false,
+        `Confirmed PSI-25 / 10.60555/4qc4-de67 should not carry (pending verification) on ${exp.id}: ${formatted}`,
+      );
+    } else if (exp.psiInvestigationId || exp.doi || /PSI-\d+|10\.\d{4,9}\//.test(exp.psiCitation)) {
       assert.ok(
         formatted.includes('(pending verification)'),
         `Missing (pending verification) on ${exp.id}: ${formatted}`,
@@ -540,14 +554,14 @@ test('conversational responses with zero numbers pass numeric audit cleanly with
   const matched = matchClosestReferenceForParams(params, experiments);
 
   const greetingReply =
-    'Hello! I am the Ignimetheus Spacecraft Fire Safety Officer. How can I assist you with microgravity combustion or cabin fire safety today?';
+    'Hello! I am the Ignimetheus Telemetry Assistant. How can I assist you with microgravity combustion or spacecraft fires today?';
   const audit = auditLlmNumbers(greetingReply, params, telemetry, matched, 'nasa-psi');
   assert.equal(audit.passed, true);
   assert.deepEqual(audit.extractedNumbers, []);
   assert.deepEqual(audit.rejectedNumbers, []);
 
   const evaluated = evaluateAuditedReasoningResponse(
-    '<think>\nThe user greeted me casually. No telemetry dump is needed.\n\nKeep the tone concise and professional.\n</think>\nHello! How can I help with spacecraft fire safety today?',
+    '<think>\nThe user greeted me casually. No telemetry dump is needed.\n\nKeep the tone concise and professional.\n</think>\nHello! How can I help with spacecraft fires today?',
     'stop',
     params,
     telemetry,
@@ -556,7 +570,7 @@ test('conversational responses with zero numbers pass numeric audit cleanly with
   );
   assert.equal(
     evaluated.auditedText,
-    'Hello! How can I help with spacecraft fire safety today?',
+    'Hello! How can I help with spacecraft fires today?',
   );
   assert.equal(evaluated.reasoningFailedValidation, false);
 

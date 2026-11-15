@@ -269,7 +269,7 @@
     "license": "CC0-1.0",
     "provenanceTag": "Adapted Reference",
     "scopeStatus": "in_scope_solid",
-    "verificationStatus": "pending_verification",
+    "verificationStatus": "Adapted Reference (unverified)",
     "title": "PMMA Rod Opposed-Flow ISS Nominal",
     "materialId": "pmma",
     "o2Percent": 21.0,
@@ -284,18 +284,21 @@
     "discrepancyNote1gVsUg": "At 15 cm/s in 0g, boundary-layer residence time matched peak reactivity, yielding higher spread rate than downward 1g burning.",
     "psiCitation": "NASA PSI-25 (DOI 10.60555/4qc4-de67) · ISS MSG BASS-II Test 14",
     "provenance": {
-      "source": "https://psi.nasa.gov/physci/repo/data/investigations/PSI-25",
-      "retrievedOn": "2026-11-13",
-      "notes": "BASS-II (PSI-25, DOI 10.60555/4qc4-de67) ISS Microgravity Science Glovebox (MSG) wind tunnel opposed-flow cast PMMA rod run.",
+      "source": "https://doi.org/10.60555/4qc4-de67 (PSI-25 Version 4, CC0-1.0); checked against NASA/TM-20210011385 (Section 4.1 Figs. 4.1–4.3 pp. 49–51 & Table A.3 pp. 106–107), PSI-25_Experimental table_BASS-II.csv, and BASS-II Test Matrix by PI Final.xlsx",
+      "retrievedOn": "2026-11-14",
+      "notes": "PSI-25 DOI resolves to BASS-II: yes (https://doi.org/10.60555/4qc4-de67 -> PSI-25 Version 4); license: CC0-1.0; source for the PMMA rod value: NOT FOUND across NASA/TM-20210011385 (Section 4.1 Figs. 4.1–4.3 pp. 49–51 & Table A.3 pp. 106–107), PSI-25_Experimental table_BASS-II.csv, and BASS-II Test Matrix by PI Final.xlsx (neither tabular dataset contains spread-rate or burn-length columns; opposed-flow PMMA rods had 57.15 mm initial length, were tested at <= 5 cm/s near 21% O2 in P13a/P13b/P22a/P22b/P25, and spread at ~0.04–0.08 mm/s rather than 1.22 mm/s / 112 mm); value found: none matching 1.22 mm/s or 112 mm at 21% O2, 15 cm/s, opposed flow — keep as Adapted Reference (unverified).",
       "fields": {
+        "psiInvestigationId": "verified",
+        "doi": "verified",
+        "license": "verified",
         "o2Percent": "assumed",
         "pressurePa": "assumed",
         "flowVelocityMs": "assumed",
         "gravityMs2": "measured",
         "sampleThicknessMm": "assumed",
         "igniterPowerW": "assumed",
-        "observedBurnLengthMm": "assumed",
-        "observedSpreadRateMmS": "assumed"
+        "observedBurnLengthMm": "adapted/unverified",
+        "observedSpreadRateMmS": "adapted/unverified"
       }
     }
   },

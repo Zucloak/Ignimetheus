@@ -116,7 +116,10 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
     exp.observedSpreadRateMmS !== null
       ? formatSpreadRate(exp.observedSpreadRateMmS / 1000, unitSystem)
       : null;
-  const provenanceLabel = exp.provenanceTag ?? 'Literature Baseline';
+  const provenanceLabel =
+    exp.id === 'BASS-II-14'
+      ? 'Adapted Reference (unverified)'
+      : exp.provenanceTag ?? 'Literature Baseline';
 
   const velocityCurve = useMemo(() => {
     const pts: Array<{ vMs: number; spreadUg: number; spread1g: number }> = [];
@@ -471,9 +474,11 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
                       >
                         {exp.verificationStatus === 'verified_ntrs_20180005168'
                           ? exp.sourceCitation ?? 'Urban et al., ASGSR 2017 (NASA NTRS 20180005168, Table 1, pp. 30–31)'
-                          : exp.sourceTable
-                            ? `${exp.sourceTable} · Pending raw PSI check`
-                            : 'Pending raw PSI check'}
+                          : exp.id === 'BASS-II-14'
+                            ? 'PSI-25 DOI & CC0-1.0 verified · Values: Adapted Reference (unverified)'
+                            : exp.sourceTable
+                              ? `${exp.sourceTable} · Pending raw PSI check`
+                              : 'Pending raw PSI check'}
                       </span>
                     </div>
                   </div>
@@ -560,7 +565,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
                               <button
                                 type="button"
                                 onClick={() => onCiteMarkerInChat(marker.id)}
-                                title={`Ask AI Safety Officer about @${marker.id}`}
+                                title={`Ask Telemetry Assistant about @${marker.id}`}
                                 className="flex flex-col text-left min-w-0 flex-1 cursor-pointer group"
                               >
                                 <div className="flex items-center gap-1.5">
@@ -599,7 +604,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
                             <button
                               type="button"
                               onClick={() => onCiteMarkerInChat(marker.id)}
-                              title={`Ask AI Safety Officer about @${marker.id}`}
+                              title={`Ask Telemetry Assistant about @${marker.id}`}
                               className="flex flex-col text-left min-w-0 flex-1 cursor-pointer group"
                             >
                               <div className="flex items-center gap-1.5">

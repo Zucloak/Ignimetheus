@@ -246,6 +246,17 @@ export function matchClosestReferenceForParams(
  * Ensures any PSI ID (PSI-nn) or DOI (10.xxxx/...) carries an explicit "(pending verification)"
  * qualifier and normalizes raw "pending_psi_verification" tags without duplicating.
  */
+function hasUnverifiedPsiOrDoi(text: string): boolean {
+  const psiIds = text.match(/\bPSI-\d+\b/gi) ?? [];
+  const dois = text.match(/10\.\d{4,9}\/[^\s),;]+/gi) ?? [];
+  if (psiIds.length === 0 && dois.length === 0) {
+    return false;
+  }
+  const hasNonPsi25Id = psiIds.some((id) => id.toUpperCase() !== 'PSI-25');
+  const hasNonPsi25Doi = dois.some((d) => d.toLowerCase() !== '10.60555/4qc4-de67');
+  return hasNonPsi25Id || hasNonPsi25Doi;
+}
+
 export function formatPsiCitation(text: string): string {
   const normalized = text
     .replace(/,\s*pending_psi_verification\s*\)/gi, ') (pending verification)')
@@ -255,7 +266,7 @@ export function formatPsiCitation(text: string): string {
   if (/\(pending verification\)/i.test(normalized)) {
     return normalized;
   }
-  if (/\bPSI-\d+\b|10\.\d{4,9}\/\S+/i.test(normalized)) {
+  if (hasUnverifiedPsiOrDoi(normalized)) {
     return `${normalized} (pending verification)`;
   }
   return normalized;
@@ -263,6 +274,12 @@ export function formatPsiCitation(text: string): string {
 
 export function formatExperimentPsiAndDoi(exp: NasaPsiExperiment): string {
   if (exp.psiInvestigationId && exp.doi) {
+    if (
+      (exp.psiInvestigationId === 'PSI-25' || exp.psiInvestigationId === 'NASA-STD-6001B') &&
+      exp.doi === '10.60555/4qc4-de67'
+    ) {
+      return `${exp.psiInvestigationId} · DOI ${exp.doi}`;
+    }
     return `${exp.psiInvestigationId} · DOI ${exp.doi} (pending verification)`;
   }
   return formatPsiCitation(exp.psiCitation);
@@ -288,7 +305,9 @@ export function formatAdaptedDiscrepancyNote(exp: NasaPsiExperiment): string {
     .replace(/\bcritical\b/gi, 'extinction')
     .replace(/\s*\(~?\d+(?:–|-)?\d*\s*cm\/s\)/gi, '')
     .replace(/\b~?\d+\s*cm\/s\s+(?=cool ambient air)/gi, '');
-  return `Adapted reference note (dataset ${exp.id}, ${formatExperimentPsiAndDoi(exp)}): ${sanitized}`;
+  const labelPrefix =
+    exp.id === 'BASS-II-14' ? 'Adapted Reference (unverified) note' : 'Adapted reference note';
+  return `${labelPrefix} (dataset ${exp.id}, ${formatExperimentPsiAndDoi(exp)}): ${sanitized}`;
 }
 
 export function formatFlameStateLabel(
@@ -2766,7 +2785,7 @@ function buildDatasetOrFeatureRuleAnswer(
     return [
       `**Reference Scenario: ${bass14?.id ?? 'BASS-II-14'} (${bass14?.title ?? 'PMMA Rod Baseline'})**`,
       bass14
-        ? `- Dataset baseline (${formatPsiCitation(bass14.psiCitation)}): ${bass14.sampleThicknessMm} mm ${MATERIALS[bass14.materialId].shortName} ${bass14.flowMode}-flow run at ${bass14.o2Percent.toFixed(1)}% O2, ${(bass14.pressurePa / 1000).toFixed(1)} kPa, ${(bass14.flowVelocityMs * 100).toFixed(1)} cm/s in ${bass14.gravityMs2.toFixed(1)} m/s² — ${bass14.observedBurnLengthMm ?? 0} mm burn at ${(bass14.observedSpreadRateMmS ?? 0).toFixed(2)} mm/s. ${formatAdaptedDiscrepancyNote(bass14)}`
+        ? `- Dataset baseline (${formatPsiCitation(bass14.psiCitation)} · Adapted Reference (unverified)): ${bass14.sampleThicknessMm} mm ${MATERIALS[bass14.materialId].shortName} ${bass14.flowMode}-flow run at ${bass14.o2Percent.toFixed(1)}% O2, ${(bass14.pressurePa / 1000).toFixed(1)} kPa, ${(bass14.flowVelocityMs * 100).toFixed(1)} cm/s in ${bass14.gravityMs2.toFixed(1)} m/s² — ${bass14.observedBurnLengthMm ?? 0} mm burn at ${(bass14.observedSpreadRateMmS ?? 0).toFixed(2)} mm/s (values: Adapted Reference (unverified), not found in NASA/TM-20210011385 or PSI-25 tables). ${formatAdaptedDiscrepancyNote(bass14)}`
         : '- BASS-II dataset baseline unavailable.',
       `- Live chamber comparison (${mat.shortName}, ${stateLabel}): Spread=${spread.text} ${spread.unit}, Da*=${telemetry.damkohlerNumber.toFixed(2)}, Re=${Math.round(telemetry.reynoldsDuct)}, Temp=${temp.text}${temp.unit}.`,
       `- Closest reference scenario (adapted): ${exp.id} (${formatPsiCitation(exp.psiCitation)}).`,
