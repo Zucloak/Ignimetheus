@@ -49,6 +49,10 @@ import type { UnitSystem } from './engine/units';
 import { parseStateFromSearch, serializeStateToSearch } from './engine/urlSync';
 import { useOnboarding } from './hooks/useOnboarding';
 import { useSafetyOfficerLLM } from './hooks/useSafetyOfficerLLM';
+import {
+  resolveDockCompactStateOnScroll,
+  resolveDockCompactStateOnWheel,
+} from './utils/dockScrollState';
 
 const NASA_PSI_EXPERIMENTS = experimentsJson as NasaPsiExperiment[];
 const LazyOnboarding = lazy(() =>
@@ -101,6 +105,41 @@ export default function App() {
   const helpButtonRef = useRef<HTMLButtonElement | null>(null);
   const onboarding = useOnboarding();
   const [selectedExperimentId, setSelectedExperimentId] = useState<string | null>(null);
+  const [isDockCompact, setIsDockCompact] = useState(false);
+  const isDockCompactRef = useRef(false);
+  const lastScrollTopRef = useRef(0);
+
+  const handleStreamScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const nextScrollTop = e.currentTarget.scrollTop;
+    const res = resolveDockCompactStateOnScroll({
+      currentCompact: isDockCompactRef.current,
+      prevScrollTop: lastScrollTopRef.current,
+      nextScrollTop,
+    });
+    lastScrollTopRef.current = res.lastScrollTop;
+    if (res.isCompact !== isDockCompactRef.current) {
+      isDockCompactRef.current = res.isCompact;
+      setIsDockCompact(res.isCompact);
+      if (res.isCompact) {
+        setPopoverResetSignal((s) => s + 1);
+      }
+    }
+  }, []);
+
+  const handleStreamWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('[role="listbox"], [role="menu"], [role="dialog"]')) {
+      return;
+    }
+    const nextCompact = resolveDockCompactStateOnWheel(isDockCompactRef.current, e.deltaY);
+    if (nextCompact !== isDockCompactRef.current) {
+      isDockCompactRef.current = nextCompact;
+      setIsDockCompact(nextCompact);
+      if (nextCompact) {
+        setPopoverResetSignal((s) => s + 1);
+      }
+    }
+  }, []);
 
   const [chamber, setChamber] = useState<ChamberTransientInput>(() =>
     getInitialChamberForParams(initial.params),
@@ -795,7 +834,12 @@ export default function App() {
           }}
         />
 
-        <div ref={centerStreamRef} className="flex-1 overflow-y-auto relative">
+        <div
+          ref={centerStreamRef}
+          onScroll={handleStreamScroll}
+          onWheel={handleStreamWheel}
+          className="flex-1 overflow-y-auto relative"
+        >
           <SimulationStage
             viewportMode={viewportMode}
             params={params}
@@ -915,6 +959,7 @@ export default function App() {
             onExecuteSlashAction={handleExecuteSlashAction}
             onSelectBackend={safetyOfficer.selectBackend}
             popoverResetSignal={popoverResetSignal}
+            isCompact={isDockCompact}
           />
         )}
       </div>

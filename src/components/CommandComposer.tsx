@@ -102,6 +102,7 @@ interface CommandComposerProps {
   onExecuteSlashAction: (action: SlashActionId) => void;
   onSelectBackend: (backend: InferenceBackendId, modelFamily?: WebGpuModelFamily) => void;
   popoverResetSignal?: number;
+  isCompact?: boolean;
 }
 
 export const CommandComposer: React.FC<CommandComposerProps> = ({
@@ -138,6 +139,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
   onExecuteSlashAction,
   onSelectBackend,
   popoverResetSignal = 0,
+  isCompact = false,
 }) => {
   const [input, setInput] = useState('');
   const [plusOpen, setPlusOpen] = useState(false);
@@ -212,8 +214,10 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(136, Math.max(36, el.scrollHeight))}px`;
-  }, [input]);
+    const minHeight = isCompact ? 26 : 36;
+    const maxHeight = isCompact ? 76 : 136;
+    el.style.height = `${Math.min(maxHeight, Math.max(minHeight, el.scrollHeight))}px`;
+  }, [input, isCompact]);
 
   useEffect(() => {
     const handleOutside = (e: MouseEvent) => {
@@ -367,11 +371,19 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
     <>
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 h-28 bg-gradient-to-t from-[#09090B] via-[#09090B]/85 to-transparent"
+        className={`pointer-events-none absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-[#09090B]/80 via-[#09090B]/35 to-transparent transition-opacity duration-200 ${
+          isCompact ? 'h-16 opacity-75' : 'h-24 opacity-100'
+        }`}
       />
       <div
         ref={containerRef}
-        className="absolute bottom-3 left-1/2 z-30 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-3xl"
+        data-testid="command-composer-dock"
+        data-compact={isCompact ? 'true' : 'false'}
+        className={`absolute bottom-3 left-1/2 z-30 -translate-x-1/2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          isCompact
+            ? 'w-[calc(100%-2rem)] max-w-xl'
+            : 'w-[calc(100%-1.5rem)] max-w-3xl'
+        }`}
       >
         {/* Upward Popover: @ Mention */}
         {mentionMatch && mentionMatch.items.length > 0 && (
@@ -379,7 +391,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
             role="listbox"
             aria-label="Cite NASA Run, Probe, or Telemetry"
             data-testid="mention-popup"
-            className="absolute bottom-full left-0 right-0 mb-2 max-h-60 overflow-y-auto rounded-xl border border-[#27272A] bg-[#111114]/98 p-1.5 backdrop-blur-xl shadow-2xl"
+            className="absolute bottom-full left-0 right-0 mb-2 max-h-60 overflow-y-auto rounded-xl border border-white/[0.10] bg-[#111116]/82 p-1.5 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_20px_50px_rgba(0,0,0,0.75),inset_0_1px_0_0_rgba(255,255,255,0.08)]"
           >
             <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-[#71717A]">
               Cite CAD Probe, NASA PSI Run, or Sensor Array
@@ -408,7 +420,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
             role="listbox"
             aria-label="Chamber Slash Commands"
             data-testid="slash-popup"
-            className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-[#27272A] bg-[#111114]/98 p-1.5 backdrop-blur-xl shadow-2xl"
+            className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-white/[0.10] bg-[#111116]/82 p-1.5 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_20px_50px_rgba(0,0,0,0.75),inset_0_1px_0_0_rgba(255,255,255,0.08)]"
           >
             <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-[#71717A]">
               Chamber Commands
@@ -435,7 +447,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
         {plusOpen && (
           <div
             data-testid="quick-questions-popover"
-            className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-[#27272A] bg-[#111114]/98 p-2 backdrop-blur-xl shadow-2xl"
+            className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-white/[0.10] bg-[#111116]/82 p-2 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_20px_50px_rgba(0,0,0,0.75),inset_0_1px_0_0_rgba(255,255,255,0.08)]"
           >
             <div className="mb-1.5 px-1 text-[10px] font-mono uppercase tracking-wider text-[#71717A]">
               Quick Engineering Prompts
@@ -454,7 +466,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
                     setPlusOpen(false);
                     onSendMessage(q);
                   }}
-                  className="rounded-lg border border-[#27272A] bg-[#18181C] px-2.5 py-1 text-xs text-[#E4E4E7] hover:border-[#3F3F46] cursor-pointer"
+                  className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs text-[#E4E4E7] hover:border-white/[0.18] hover:bg-white/[0.08] cursor-pointer transition-colors"
                 >
                   {q}
                 </button>
@@ -469,7 +481,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
             role="menu"
             aria-label="Select Inference Engine"
             data-testid="inference-backend-popover"
-            className="absolute bottom-full left-0 mb-2 w-80 max-w-[92vw] rounded-xl border border-[#27272A] bg-[#111114]/98 p-1.5 backdrop-blur-xl shadow-2xl"
+            className="absolute bottom-full left-0 mb-2 w-80 max-w-[92vw] rounded-xl border border-white/[0.10] bg-[#111116]/82 p-1.5 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_20px_50px_rgba(0,0,0,0.75),inset_0_1px_0_0_rgba(255,255,255,0.08)]"
           >
             <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-[#71717A]">
               Inference Backend
@@ -607,91 +619,102 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
           />
         )}
 
-        {/* Outer Two-Tier Composer Shell */}
+        {/* Outer Glassmorphic Composer Shell */}
         <div
           data-tour="telemetry-assistant"
-          className="rounded-2xl border border-[#222226] bg-[#111114]/96 backdrop-blur-xl shadow-2xl overflow-hidden"
+          className="rounded-2xl border border-white/[0.11] bg-[#111116]/68 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.78),inset_0_1px_0_0_rgba(255,255,255,0.12)] overflow-hidden transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]"
         >
-          <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-1 border-b border-[#1F1F24] px-3 py-1.5">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                data-testid="composer-preset-pill"
-                aria-expanded={presetMenuOpen}
-                aria-haspopup="menu"
-                onClick={() => {
-                  setPresetMenuOpen((o) => !o);
-                  setQuickTuneOpen(false);
-                  setPlusOpen(false);
-                  setModelMenuOpen(false);
-                }}
-                className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap cursor-pointer transition-colors ${
-                  presetMenuOpen
-                    ? 'bg-[#1C1C20] text-[#F4F4F5]'
-                    : 'text-[#E4E4E7] hover:bg-[#18181C]'
-                }`}
-              >
-                <span>{activePresetLabel}</span>
-                <HugeiconsIcon icon={ArrowDown01Icon} size={11} strokeWidth={1.5} className="text-[#71717A]" />
-              </button>
+          {!isCompact && (
+            <div
+              data-testid="composer-top-bar"
+              className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-1 border-b border-white/[0.07] bg-white/[0.02] px-3 py-1.5"
+            >
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  data-testid="composer-preset-pill"
+                  aria-expanded={presetMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => {
+                    setPresetMenuOpen((o) => !o);
+                    setQuickTuneOpen(false);
+                    setPlusOpen(false);
+                    setModelMenuOpen(false);
+                  }}
+                  className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap cursor-pointer transition-colors ${
+                    presetMenuOpen
+                      ? 'bg-white/[0.10] text-[#F4F4F5]'
+                      : 'text-[#E4E4E7] hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <span>{activePresetLabel}</span>
+                  <HugeiconsIcon icon={ArrowDown01Icon} size={11} strokeWidth={1.5} className="text-[#71717A]" />
+                </button>
 
-              <span className="text-[#27272A]">·</span>
+                <span className="text-white/[0.16]">·</span>
 
-              <button
-                ref={quickTunePillRef}
-                type="button"
-                data-testid="composer-quick-tune-pill"
-                aria-expanded={quickTuneOpen}
-                aria-haspopup="dialog"
-                onClick={() => {
-                  setQuickTuneOpen((o) => !o);
-                  setPresetMenuOpen(false);
-                  setPlusOpen(false);
-                  setModelMenuOpen(false);
-                }}
-                className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-mono tabular-nums whitespace-nowrap cursor-pointer transition-colors ${
-                  quickTuneOpen
-                    ? 'bg-[#1C1C20] text-[#F4F4F5]'
-                    : 'text-[#A1A1AA] hover:bg-[#18181C] hover:text-[#F4F4F5]'
-                }`}
-              >
-                <span>
-                  {matched.experiment.id} · {params.o2Percent.toFixed(1)}% O2 · {velFmt.text} {velFmt.unit}
-                </span>
-                <HugeiconsIcon icon={ArrowDown01Icon} size={11} strokeWidth={1.5} className="text-[#71717A]" />
-              </button>
+                <button
+                  ref={quickTunePillRef}
+                  type="button"
+                  data-testid="composer-quick-tune-pill"
+                  aria-expanded={quickTuneOpen}
+                  aria-haspopup="dialog"
+                  onClick={() => {
+                    setQuickTuneOpen((o) => !o);
+                    setPresetMenuOpen(false);
+                    setPlusOpen(false);
+                    setModelMenuOpen(false);
+                  }}
+                  className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-mono tabular-nums whitespace-nowrap cursor-pointer transition-colors ${
+                    quickTuneOpen
+                      ? 'bg-white/[0.10] text-[#F4F4F5]'
+                      : 'text-[#A1A1AA] hover:bg-white/[0.06] hover:text-[#F4F4F5]'
+                  }`}
+                >
+                  <span>
+                    {matched.experiment.id} · {params.o2Percent.toFixed(1)}% O2 · {velFmt.text} {velFmt.unit}
+                  </span>
+                  <HugeiconsIcon icon={ArrowDown01Icon} size={11} strokeWidth={1.5} className="text-[#71717A]" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <CombustionTriggerButton
+                  chamberState={telemetry.chamberState}
+                  stateElapsedS={telemetry.stateElapsedS}
+                  variant="ghost"
+                  testId="composer-combustion-btn"
+                  onClick={onToggleCombustion}
+                />
+
+                <button
+                  type="button"
+                  data-testid="composer-run-diagnostic-btn"
+                  onClick={onRunDiagnostic}
+                  disabled={isGenerating}
+                  className="rounded-md px-2 py-1 text-xs font-medium text-[#A1A1AA] hover:bg-white/[0.07] hover:text-[#F4F4F5] disabled:opacity-45 whitespace-nowrap cursor-pointer transition-colors"
+                >
+                  Diagnostic
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onToggleCollapseSim}
+                  className="rounded-md px-2 py-1 text-xs font-medium text-[#71717A] hover:bg-white/[0.07] hover:text-[#F4F4F5] whitespace-nowrap cursor-pointer transition-colors"
+                >
+                  {isCollapsed ? 'Expand Sim' : 'Collapse Sim'}
+                </button>
+              </div>
             </div>
+          )}
 
-            <div className="flex items-center gap-1 shrink-0">
-              <CombustionTriggerButton
-                chamberState={telemetry.chamberState}
-                stateElapsedS={telemetry.stateElapsedS}
-                variant="ghost"
-                testId="composer-combustion-btn"
-                onClick={onToggleCombustion}
-              />
-
-              <button
-                type="button"
-                data-testid="composer-run-diagnostic-btn"
-                onClick={onRunDiagnostic}
-                disabled={isGenerating}
-                className="rounded-md px-2 py-1 text-xs font-medium text-[#A1A1AA] hover:bg-[#1C1C20] hover:text-[#F4F4F5] disabled:opacity-45 whitespace-nowrap cursor-pointer"
-              >
-                Diagnostic
-              </button>
-
-              <button
-                type="button"
-                onClick={onToggleCollapseSim}
-                className="rounded-md px-2 py-1 text-xs font-medium text-[#71717A] hover:bg-[#1C1C20] hover:text-[#F4F4F5] whitespace-nowrap cursor-pointer"
-              >
-                {isCollapsed ? 'Expand Sim' : 'Collapse Sim'}
-              </button>
-            </div>
-          </div>
-
-          <div className="m-2 rounded-xl border border-[#2A2A2F] bg-[#18181C] px-3 pt-2.5 pb-2">
+          <div
+            className={
+              isCompact
+                ? 'flex items-center gap-2.5 px-3.5 py-2'
+                : 'm-2 rounded-xl border border-white/[0.08] bg-white/[0.035] px-3 pt-2.5 pb-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]'
+            }
+          >
             <textarea
               ref={textareaRef}
               rows={1}
@@ -700,112 +723,142 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
               onKeyDown={handleKeyDown}
               placeholder="Ask about this run (@ cite, / actions)"
               aria-label="Ask Telemetry Assistant"
-              className="w-full min-h-[38px] resize-none bg-transparent text-sm text-[#F4F4F5] placeholder:text-[#71717A] focus:outline-none leading-relaxed"
+              className={`w-full resize-none bg-transparent text-sm text-[#F4F4F5] placeholder:text-[#A1A1AA]/70 focus:outline-none leading-relaxed ${
+                isCompact ? 'min-h-[26px] py-0.5' : 'min-h-[38px]'
+              }`}
             />
 
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1 min-w-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlusOpen((o) => !o);
-                    setModelMenuOpen(false);
-                    setPresetMenuOpen(false);
-                    setQuickTuneOpen(false);
-                  }}
-                  aria-label="Insert quick telemetry question"
-                  aria-expanded={plusOpen}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border-0 bg-transparent text-[#A1A1AA] transition-colors hover:bg-[#222227]/70 hover:text-[#F4F4F5] shrink-0 cursor-pointer"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                </button>
-
-                <button
-                  type="button"
-                  data-testid="composer-model-btn"
-                  onClick={() => {
-                    setModelMenuOpen((o) => !o);
-                    setPlusOpen(false);
-                    setPresetMenuOpen(false);
-                    setQuickTuneOpen(false);
-                  }}
-                  aria-label="Select AI engine"
-                  aria-expanded={modelMenuOpen}
-                  className="inline-flex h-7 items-center gap-1.5 rounded-md border-0 bg-transparent px-1.5 text-[11px] font-medium text-[#A1A1AA] transition-colors hover:bg-[#222227]/70 hover:text-[#F4F4F5] min-w-0 cursor-pointer"
-                >
-                  <HugeiconsIcon icon={CpuIcon} size={12} strokeWidth={1.5} className="text-[#71717A] shrink-0" />
-                  <span className="truncate max-w-[155px] sm:max-w-none">{modelLabel}</span>
-                  <HugeiconsIcon icon={ArrowDown01Icon} size={11} strokeWidth={1.5} className="text-[#71717A] shrink-0" />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {tierStatusLabel && (
-                  <span
-                    data-testid="composer-tier-label"
-                    className="hidden sm:inline-flex items-center rounded border border-[#27272A] bg-[#141418] px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-[#A1A1AA]"
-                  >
-                    {tierStatusLabel}
-                  </span>
-                )}
-                <span
-                  data-testid="webllm-status"
-                  title={webGpuUnavailableNote ?? statusDisplay.label}
-                  className="inline-flex items-center gap-1.5 border-0 bg-transparent px-1 py-0.5 text-[11px] font-mono tabular-nums text-[#A1A1AA]"
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDotColor}`} />
-                  <span className="whitespace-nowrap">
-                    {isGenerating && selectedBackend === 'webgpu' && webGpuPhase === 'ready'
-                      ? 'Thinking · Local WebGPU'
-                      : statusDisplay.label}
-                  </span>
-                </span>
-
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!isGenerating && !input.trim()}
-                  aria-label={isGenerating ? 'Stop response' : 'Send message'}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#09090B] transition-colors hover:bg-zinc-200 disabled:bg-[#27272A] disabled:text-[#71717A] cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {isGenerating ? (
-                    <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-                      <rect x="2" y="2" width="8" height="8" rx="1.5" />
-                    </svg>
-                  ) : (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path
-                        d="M12 19V5M12 5L6 11M12 5L18 11"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {selectedBackend === 'webgpu' && webGpuUnavailableNote && (
-              <div
-                data-testid="webgpu-fallback-note"
-                role="status"
-                className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug text-[#A1A1AA]"
+            {isCompact ? (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!isGenerating && !input.trim()}
+                aria-label={isGenerating ? 'Stop response' : 'Send message'}
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[#09090B] transition-colors hover:bg-zinc-200 disabled:bg-white/[0.10] disabled:text-[#71717A] cursor-pointer disabled:cursor-not-allowed"
               >
-                <span aria-hidden="true" className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-300 shrink-0" />
-                <span>{webGpuUnavailableNote}</span>
-              </div>
-            )}
+                {isGenerating ? (
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                    <rect x="2" y="2" width="8" height="8" rx="1.5" />
+                  </svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M12 19V5M12 5L6 11M12 5L18 11"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
+            ) : (
+              <>
+                <div data-testid="composer-footer-bar" className="mt-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlusOpen((o) => !o);
+                        setModelMenuOpen(false);
+                        setPresetMenuOpen(false);
+                        setQuickTuneOpen(false);
+                      }}
+                      aria-label="Insert quick telemetry question"
+                      aria-expanded={plusOpen}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border-0 bg-transparent text-[#A1A1AA] transition-colors hover:bg-white/[0.08] hover:text-[#F4F4F5] shrink-0 cursor-pointer"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                    </button>
 
-            <div
-              data-testid="composer-disclaimer"
-              className="mt-1.5 border-t border-[#222226] pt-1 text-[10.5px] text-[#71717A]"
-            >
-              Explains this simulation. Not a safety authority.
-            </div>
+                    <button
+                      type="button"
+                      data-testid="composer-model-btn"
+                      onClick={() => {
+                        setModelMenuOpen((o) => !o);
+                        setPlusOpen(false);
+                        setPresetMenuOpen(false);
+                        setQuickTuneOpen(false);
+                      }}
+                      aria-label="Select AI engine"
+                      aria-expanded={modelMenuOpen}
+                      className="inline-flex h-7 items-center gap-1.5 rounded-md border-0 bg-transparent px-1.5 text-[11px] font-medium text-[#A1A1AA] transition-colors hover:bg-white/[0.08] hover:text-[#F4F4F5] min-w-0 cursor-pointer"
+                    >
+                      <HugeiconsIcon icon={CpuIcon} size={12} strokeWidth={1.5} className="text-[#71717A] shrink-0" />
+                      <span className="truncate max-w-[155px] sm:max-w-none">{modelLabel}</span>
+                      <HugeiconsIcon icon={ArrowDown01Icon} size={11} strokeWidth={1.5} className="text-[#71717A] shrink-0" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {tierStatusLabel && (
+                      <span
+                        data-testid="composer-tier-label"
+                        className="hidden sm:inline-flex items-center rounded border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-[#A1A1AA]"
+                      >
+                        {tierStatusLabel}
+                      </span>
+                    )}
+                    <span
+                      data-testid="webllm-status"
+                      title={webGpuUnavailableNote ?? statusDisplay.label}
+                      className="inline-flex items-center gap-1.5 border-0 bg-transparent px-1 py-0.5 text-[11px] font-mono tabular-nums text-[#A1A1AA]"
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDotColor}`} />
+                      <span className="whitespace-nowrap">
+                        {isGenerating && selectedBackend === 'webgpu' && webGpuPhase === 'ready'
+                          ? 'Thinking · Local WebGPU'
+                          : statusDisplay.label}
+                      </span>
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={!isGenerating && !input.trim()}
+                      aria-label={isGenerating ? 'Stop response' : 'Send message'}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#09090B] transition-colors hover:bg-zinc-200 disabled:bg-white/[0.10] disabled:text-[#71717A] cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      {isGenerating ? (
+                        <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                          <rect x="2" y="2" width="8" height="8" rx="1.5" />
+                        </svg>
+                      ) : (
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path
+                            d="M12 19V5M12 5L6 11M12 5L18 11"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {selectedBackend === 'webgpu' && webGpuUnavailableNote && (
+                  <div
+                    data-testid="webgpu-fallback-note"
+                    role="status"
+                    className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug text-[#A1A1AA]"
+                  >
+                    <span aria-hidden="true" className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-300 shrink-0" />
+                    <span>{webGpuUnavailableNote}</span>
+                  </div>
+                )}
+
+                <div
+                  data-testid="composer-disclaimer"
+                  className="mt-1.5 border-t border-white/[0.07] pt-1 text-[10.5px] text-[#71717A]"
+                >
+                  Explains this simulation. Not a safety authority.
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
