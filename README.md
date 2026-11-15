@@ -105,7 +105,6 @@ The onboard Telemetry Assistant (`src/hooks/useSafetyOfficerLLM.ts`, `src/engine
 ## 6. Demo and Screenshots
 
 - **Live Demo**: `https://ignimetheus.pages.dev/demo`
-- **Screenshots**: `[SCREENSHOTS]`
 - **Offline Usage**: Local model weights download once; load online first, then it works offline.
 
 ---
