@@ -7,6 +7,25 @@ import {VitePWA} from 'vite-plugin-pwa';
 export default defineConfig(() => {
   return {
     plugins: [
+      {
+        name: 'cloudflare-pages-demo-pretty-url',
+        configureServer(server) {
+          server.middlewares.use((req, _res, next) => {
+            if (req.url === '/demo' || req.url === '/demo/' || req.url?.startsWith('/demo?')) {
+              req.url = req.url.replace(/^\/demo\/?/, '/demo.html');
+            }
+            next();
+          });
+        },
+        configurePreviewServer(server) {
+          server.middlewares.use((req, _res, next) => {
+            if (req.url === '/demo' || req.url === '/demo/' || req.url?.startsWith('/demo?')) {
+              req.url = req.url.replace(/^\/demo\/?/, '/demo.html');
+            }
+            next();
+          });
+        },
+      },
       react(),
       tailwindcss(),
       VitePWA({
@@ -44,9 +63,10 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          cacheId: 'ignimetheus-v2',
+          cacheId: 'ignimetheus-v3',
           cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json}'],
+          navigateFallbackDenylist: [/^\/demo(\.html)?$/, /^\/demo\.mp4$/],
           maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
         },
         devOptions: {

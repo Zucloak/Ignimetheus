@@ -1,0 +1,3170 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BME — Process in bulk. Collaborate in private.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bk:#070707;
+  --wh:#F5F5F2;
+  --gy:#8A8A86;
+  --gn:#2EE58A;
+  --rd:#FF3B30;
+  --or:#FF8A1F;
+  --gd:#F5C451;
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font-mono:'JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  color-scheme:dark;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;background:#000;color:var(--wh);overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:var(--font-sans)}
+#box{position:relative;border-radius:10px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.85)}
+#st{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;overflow:hidden;background:var(--bk)}
+#cam{position:absolute;inset:0}
+.sc{position:absolute;inset:0;opacity:0;background:var(--bk);color:var(--wh);pointer-events:none}
+
+/* Oversized Inter Display Typography & Controlled Ambient Glow */
+.grad-text{
+  background:linear-gradient(180deg,#FFFFFF 0%,#DDE1EC 54%,#8B93AA 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:var(--wh);
+  padding:0.06em 0.08em 0.14em 0;
+  margin:-0.06em -0.08em -0.14em 0;
+}
+.grad-text-gn{
+  background:linear-gradient(180deg,#EEFFF6 0%,#2EE58A 52%,#179958 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:var(--gn);
+  padding:0.06em 0.08em 0.14em 0;
+  margin:-0.06em -0.08em -0.14em 0;
+}
+.h{
+  position:absolute;
+  left:80px;
+  bottom:108px;
+  margin:0;
+  font-family:var(--font-sans);
+  font-weight:800;
+  font-size:86px;
+  line-height:1.02;
+  letter-spacing:-0.045em;
+  transform-origin:0 100%;
+  z-index:4;
+}
+.h::before{
+  content:"";
+  position:absolute;
+  left:-90px;
+  top:-60px;
+  right:-110px;
+  bottom:-60px;
+  background:radial-gradient(ellipse at 38% 52%,rgba(221,225,236,0.12) 0%,rgba(139,147,170,0.04) 48%,transparent 74%);
+  pointer-events:none;
+  z-index:-1;
+}
+.h span{
+  display:block;
+  padding:0.05em 0.08em 0.12em 0;
+  margin:-0.05em -0.08em -0.10em 0;
+  background:linear-gradient(180deg,#FFFFFF 0%,#DDE1EC 54%,#8B93AA 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:var(--wh);
+}
+.sub{
+  position:absolute;
+  left:80px;
+  bottom:52px;
+  margin:0;
+  font:500 23px/1.35 var(--font-sans);
+  letter-spacing:-0.015em;
+  color:var(--gy);
+  z-index:4;
+}
+
+/* MOMENT 1: Dimensional Filename Tunnel (Scene 1) */
+#s1{perspective:1050px;transform-style:preserve-3d}
+#tunnelStage{
+  position:absolute;
+  inset:0;
+  transform-style:preserve-3d;
+  pointer-events:none;
+}
+#wall{
+  position:absolute;
+  inset:0;
+  padding:40px 80px;
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  grid-auto-rows:1fr;
+  gap:10px;
+  font:500 16px var(--font-mono);
+  color:var(--gy);
+  transform-style:preserve-3d;
+}
+.wl{
+  white-space:nowrap;
+  overflow:hidden;
+  will-change:transform,opacity;
+  backface-visibility:hidden;
+}
+#fn{
+  position:absolute;
+  font:600 46px var(--font-mono);
+  letter-spacing:-0.02em;
+  color:var(--wh);
+  white-space:nowrap;
+  will-change:transform,opacity;
+  padding:8px 18px;
+  background:rgba(16,17,20,0.82);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:10px;
+}
+#sl{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:var(--font-sans);
+  font-weight:800;
+  font-size:184px;
+  letter-spacing:-0.046em;
+  line-height:1.05;
+  white-space:nowrap;
+  z-index:5;
+}
+#sl::before{
+  content:"";
+  position:absolute;
+  width:980px;
+  height:360px;
+  background:radial-gradient(ellipse at center,rgba(221,225,236,0.13) 0%,rgba(139,147,170,0.04) 50%,transparent 72%);
+  pointer-events:none;
+  z-index:-1;
+}
+#slText{
+  display:block;
+  padding:0.06em 0.08em 0.14em 0.04em;
+}
+
+/* MOMENT 2: Split-Flap Rename Board (Scene 2) */
+#big{
+  position:absolute;
+  left:130px;
+  top:250px;
+  width:1020px;
+  height:170px;
+  background:#111214;
+  border:2px solid #2e3036;
+  border-radius:24px;
+  display:flex;
+  align-items:center;
+  gap:26px;
+  padding:0 40px;
+  box-sizing:border-box;
+  box-shadow:0 20px 50px rgba(0,0,0,0.55);
+}
+#big .ic{width:78px;height:78px;border-radius:16px;background:var(--wh);flex:none}
+#nm{font:600 50px var(--font-mono);letter-spacing:-0.02em;white-space:nowrap}
+.sel{background:var(--wh);color:var(--bk);border-radius:4px;padding:0 4px}
+.car{display:inline-block;width:4px;height:50px;background:var(--wh);vertical-align:-8px;margin:0 2px;animation:b .6s steps(1) infinite}
+@keyframes b{50%{opacity:0}}
+#chk{margin-left:auto;font:700 52px var(--font-sans);color:var(--gn)}
+#cap{position:absolute;left:130px;top:446px;font:500 22px var(--font-mono);color:var(--gy);letter-spacing:-0.01em}
+#bgRows{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+  perspective:1100px;
+  -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,0.95) 0%,rgba(0,0,0,0.92) 48%,rgba(0,0,0,0.22) 72%,transparent 88%),radial-gradient(ellipse 66% 58% at 50% 34%,rgba(0,0,0,1) 24%,rgba(0,0,0,0.45) 68%,transparent 96%);
+  -webkit-mask-composite:source-in;
+  mask-image:linear-gradient(180deg,rgba(0,0,0,0.95) 0%,rgba(0,0,0,0.92) 48%,rgba(0,0,0,0.22) 72%,transparent 88%),radial-gradient(ellipse 66% 58% at 50% 34%,rgba(0,0,0,1) 24%,rgba(0,0,0,0.45) 68%,transparent 96%);
+  mask-composite:intersect;
+  opacity:0;
+  will-change:opacity,transform;
+}
+.bg-row{
+  position:absolute;
+  width:276px;
+  height:44px;
+  border-radius:9px;
+  background:rgba(16,18,22,0.82);
+  border:1px solid rgba(255,255,255,0.07);
+  box-shadow:inset 4px 0 #343741;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 12px 0 14px;
+  box-sizing:border-box;
+  font:500 12px var(--font-mono);
+  letter-spacing:-0.015em;
+  color:rgba(138,138,134,0.68);
+  transform-origin:50% 50%;
+  will-change:transform,opacity;
+}
+.bg-row .bg-tag{
+  font:600 9px var(--font-sans);
+  letter-spacing:0.08em;
+  padding:2px 5px;
+  border-radius:3px;
+  background:rgba(255,255,255,0.04);
+  color:#60646f;
+}
+.bg-row.bg-done{
+  background:rgba(15,22,19,0.86);
+  border-color:rgba(46,229,138,0.24);
+  box-shadow:inset 4px 0 rgba(46,229,138,0.75);
+  color:rgba(245,245,242,0.82);
+}
+.bg-row.bg-done .bg-tag{
+  background:rgba(46,229,138,0.22);
+  color:var(--gn);
+}
+#rows{position:absolute;inset:0;pointer-events:none;z-index:3}
+.row{
+  position:absolute;
+  width:540px;
+  height:74px;
+  perspective:950px;
+  box-sizing:border-box;
+}
+.row-card{
+  position:relative;
+  width:100%;
+  height:100%;
+  transform-style:preserve-3d;
+  transform-origin:50% 50%;
+  will-change:transform;
+}
+.row-face{
+  position:absolute;
+  inset:0;
+  border-radius:14px;
+  background:#131417;
+  border:1px solid #2a2c32;
+  box-sizing:border-box;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 22px 0 26px;
+  overflow:hidden;
+}
+.row-face::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:50%;
+  height:1px;
+  background:rgba(255,255,255,0.045);
+  pointer-events:none;
+}
+.row-front{
+  box-shadow:inset 7px 0 #454852,0 14px 32px rgba(0,0,0,0.65);
+}
+.row-back{
+  transform:rotateX(-180deg);
+  background:#121715;
+  border-color:rgba(46,229,138,0.38);
+  box-shadow:inset 7px 0 var(--gn),0 14px 32px rgba(0,0,0,0.68);
+}
+.row-face span.fn-txt{
+  font:500 22px var(--font-mono);
+  letter-spacing:-0.015em;
+  white-space:nowrap;
+}
+.row-front span.fn-txt{color:var(--gy)}
+.row-back span.fn-txt{font-weight:700;color:var(--wh)}
+.row-tag{
+  font:600 11px var(--font-sans);
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  padding:4px 8px;
+  border-radius:5px;
+  flex:none;
+}
+.row-front .row-tag{color:#6f727d;background:rgba(255,255,255,0.04)}
+.row-back .row-tag{color:var(--bk);background:var(--gn);font-weight:700}
+
+#h2 span.h2-line{
+  display:block;
+  will-change:transform,opacity;
+  transform-origin:0 100%;
+}
+#h2 span.h2-gn{
+  background:linear-gradient(180deg,#EEFFF6 0%,#2EE58A 52%,#179958 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:var(--gn);
+}
+#s2Sub{
+  position:absolute;
+  left:80px;
+  bottom:104px;
+  margin:0;
+  font:500 20px/1.3 var(--font-sans);
+  letter-spacing:-0.012em;
+  color:var(--gy);
+  opacity:0;
+  z-index:4;
+}
+
+#cnt{
+  position:absolute;
+  right:80px;
+  bottom:40px;
+  padding:12px 24px;
+  border-radius:99px;
+  background:rgba(13,24,18,0.9);
+  border:2px solid var(--gn);
+  color:var(--gn);
+  font:700 19px var(--font-mono);
+  letter-spacing:0.08em;
+  line-height:1;
+  transform-origin:100% 50%;
+  box-shadow:0 12px 32px rgba(0,0,0,0.6);
+  opacity:0;
+  z-index:5;
+  white-space:nowrap;
+}
+#pills{position:absolute;left:80px;bottom:36px;display:flex;gap:14px;z-index:5}
+.pill{
+  border:2px solid;
+  border-radius:99px;
+  padding:8px 22px;
+  font:600 20px var(--font-sans);
+  letter-spacing:-0.015em;
+  opacity:0;
+  background:rgba(10,10,12,0.75);
+}
+
+/* Dedicated Metadata Scene (#sMeta) */
+#metaEyebrow{position:absolute;left:80px;top:48px;color:var(--gd);font:600 15px var(--font-sans);letter-spacing:.12em;opacity:0}
+#metaFileCard{position:absolute;left:80px;top:112px;width:220px;height:270px;padding:22px 20px;background:#f1f1ed;color:#070707;border-radius:12px;box-sizing:border-box;opacity:0;transform:translateY(28px)}
+#metaFileIcon{position:relative;width:54px;height:66px;margin-bottom:25px;background:#fff;border:2px solid #111;border-radius:5px;box-shadow:5px 5px 0 #c9c9c3}
+#metaFileIcon:before{content:"";position:absolute;right:-2px;top:-2px;width:18px;height:18px;background:#d6d6d0;border-left:2px solid #111;border-bottom:2px solid #111;clip-path:polygon(0 0,100% 100%,0 100%)}
+#metaFileIcon:after{content:"";position:absolute;left:10px;right:10px;top:30px;height:3px;background:#121212;box-shadow:0 9px 0 #777,0 18px 0 #aaa}
+#metaFilename{font:700 16px var(--font-mono);line-height:1.5;overflow-wrap:anywhere;letter-spacing:-.03em}
+#metaFileType{margin-top:11px;color:#555;font:600 12px var(--font-sans);letter-spacing:.06em}
+#metaPanel{position:absolute;left:334px;top:106px;width:866px;height:310px;background:#0e0f12;border:1px solid #2e3038;border-radius:12px;padding:13px 18px;box-sizing:border-box;opacity:0;transform:translateX(26px)}
+#metaPanelHead,.metaRow{display:grid;grid-template-columns:235px 1fr 116px;align-items:center;column-gap:14px}
+#metaPanelHead{height:34px;padding:0 12px;color:#7f838e;font:600 12px var(--font-sans);letter-spacing:.1em;border-bottom:1px solid #282a30}
+.metaRow{height:59px;padding:0 12px;border-bottom:1px solid #202228;opacity:0;transform:translateX(22px);box-sizing:border-box;font:500 16px var(--font-mono)}
+.metaRow:last-child{border-bottom:0}
+.metaField{font-family:var(--font-sans);font-weight:500;color:#b8bcc6}
+.metaValue{color:#f5f5f2;white-space:nowrap}
+.metaState{justify-self:end;font-family:var(--font-sans);color:#8a8a86;font-size:12px;font-weight:700;letter-spacing:.06em}
+.metaRow.changed{background:linear-gradient(90deg,rgba(46,229,138,.09),transparent 78%)}
+.metaRow.changed .metaValue,.metaRow.changed .metaState{color:var(--gn)}
+.metaRow.removed{background:linear-gradient(90deg,rgba(255,138,31,.10),transparent 78%)}
+.metaRow.removed .metaValue,.metaRow.removed .metaState{color:var(--or)}
+#metaScan{position:absolute;left:334px;top:151px;width:866px;height:2px;background:var(--gd);box-shadow:0 0 12px rgba(245,196,81,.55);opacity:0;pointer-events:none}
+
+/* SECTION 4: Accurate PII & API-Key Scanning (#s3) — White/Off-White Document Visuals */
+#scanEyebrow{
+  position:absolute;
+  left:80px;
+  top:38px;
+  font:600 14px var(--font-sans);
+  letter-spacing:0.12em;
+  color:var(--or);
+  text-transform:uppercase;
+}
+.doc{
+  position:absolute;
+  top:72px;
+  width:208px;
+  height:244px;
+  background:#F4F4F0;
+  color:#111215;
+  border:2px solid #D8D8D2;
+  border-radius:12px;
+  padding:16px 14px;
+  box-sizing:border-box;
+  box-shadow:0 12px 28px rgba(0,0,0,0.45);
+  transition:border-color .15s,background-color .15s,box-shadow .15s;
+}
+.doc.hit{
+  background:#FAF8F6;
+  border-color:var(--or);
+  box-shadow:0 14px 32px rgba(0,0,0,0.55),0 0 0 2px rgba(255,138,31,0.28);
+}
+.doc.hit.key-doc{
+  border-color:var(--rd);
+  box-shadow:0 14px 32px rgba(0,0,0,0.55),0 0 0 2px rgba(255,59,48,0.32);
+}
+.doc-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+  padding-bottom:9px;
+  margin-bottom:11px;
+  border-bottom:1.5px solid rgba(7,7,7,0.12);
+  font:700 12px/1.2 var(--font-mono);
+  letter-spacing:-0.02em;
+  color:#18191D;
+}
+.doc-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#B5B5AE;
+  flex:none;
+}
+.doc.hit .doc-dot{background:var(--or);box-shadow:0 0 6px rgba(255,138,31,0.7)}
+.doc.hit.key-doc .doc-dot{background:var(--rd);box-shadow:0 0 6px rgba(255,59,48,0.7)}
+.doc s{
+  display:block;
+  height:9px;
+  background:rgba(7,7,7,0.13);
+  border-radius:4px;
+  margin-bottom:10px;
+  text-decoration:none;
+}
+.doc s.w{width:68%}
+.doc s.m{width:84%}
+.doc-token{
+  margin:10px 0 11px;
+  padding:8px 8px;
+  border-radius:6px;
+  background:rgba(7,7,7,0.065);
+  border:1.5px solid rgba(7,7,7,0.15);
+  font:700 11.5px/1.3 var(--font-mono);
+  letter-spacing:-0.025em;
+  color:#1E2026;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  transition:background-color .15s,color .15s,border-color .15s;
+}
+.doc.hit .doc-token{
+  background:var(--or);
+  border-color:#D96B00;
+  color:#070707;
+}
+.doc.hit.key-doc .doc-token{
+  background:var(--rd);
+  border-color:#C81E14;
+  color:#FFFFFF;
+}
+.doc em{
+  position:absolute;
+  left:0;
+  bottom:-40px;
+  font:700 12.5px/1 var(--font-sans);
+  letter-spacing:0.06em;
+  font-style:normal;
+  background:var(--or);
+  color:var(--bk);
+  padding:7px 12px;
+  border-radius:6px;
+  white-space:nowrap;
+  opacity:0;
+  transform:translateY(-4px);
+  transition:opacity .15s,transform .15s;
+  box-shadow:0 6px 16px rgba(0,0,0,0.4);
+}
+.doc.hit em{opacity:1;transform:translateY(0)}
+.doc.hit em.key-badge{background:var(--rd);color:var(--wh)}
+#scan{
+  position:absolute;
+  top:56px;
+  width:4px;
+  height:316px;
+  background:linear-gradient(180deg,transparent,var(--or) 12%,#fff 50%,var(--or) 88%,transparent);
+  box-shadow:0 0 28px 4px rgba(255,138,31,0.65);
+  z-index:6;
+}
+#scanHud{
+  position:absolute;
+  left:80px;
+  top:388px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.hud-pill{
+  padding:8px 16px;
+  border-radius:8px;
+  background:#121317;
+  border:1px solid #2b2e37;
+  font:600 14px var(--font-sans);
+  letter-spacing:0.02em;
+  color:var(--gy);
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.hud-pill b{
+  font-family:var(--font-mono);
+  color:var(--wh);
+  font-variant-numeric:tabular-nums;
+}
+.hud-pill.active-pii{border-color:rgba(255,138,31,0.6);color:#d7dbe6}
+.hud-pill.active-pii b{color:var(--or)}
+.hud-pill.active-key{border-color:rgba(255,59,48,0.65);color:#d7dbe6}
+.hud-pill.active-key b{color:var(--rd)}
+
+/* MOMENT 3: Local Processing & Privacy 3D Glass Cube (#s4) */
+#s4{perspective:1150px}
+#cubeStage{
+  position:absolute;
+  left:540px;
+  top:225px;
+  width:0;
+  height:0;
+  transform-style:preserve-3d;
+  z-index:3;
+}
+#glassCube{
+  position:relative;
+  width:240px;
+  height:240px;
+  left:-120px;
+  top:-120px;
+  transform-style:preserve-3d;
+  will-change:transform;
+}
+.cube-face{
+  position:absolute;
+  width:240px;
+  height:240px;
+  box-sizing:border-box;
+  border:2px solid rgba(245,245,242,0.34);
+  background:linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.014) 60%,rgba(255,255,255,0.04) 100%);
+  transition:border-color .12s,background-color .12s,box-shadow .12s;
+  backface-visibility:visible;
+  transform-origin:50% 50%;
+  will-change:transform,opacity;
+}
+.cube-face.lit{
+  border-color:rgba(46,229,138,0.9);
+  background:linear-gradient(135deg,rgba(46,229,138,0.15) 0%,rgba(46,229,138,0.03) 70%,rgba(46,229,138,0.08) 100%);
+  box-shadow:inset 0 0 22px rgba(46,229,138,0.18);
+}
+.cube-file{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:28px;
+  height:34px;
+  margin-left:-14px;
+  margin-top:-17px;
+  border-radius:5px;
+  background:var(--wh);
+  border:1.5px solid #070707;
+  transform-style:preserve-3d;
+  will-change:transform,opacity;
+}
+.cube-file.active{
+  background:var(--gn);
+  box-shadow:0 0 12px rgba(46,229,138,0.55);
+}
+#localTag{
+  position:absolute;
+  left:420px;
+  top:392px;
+  width:240px;
+  text-align:center;
+  font:600 15px var(--font-mono);
+  letter-spacing:0.08em;
+  color:var(--gn);
+}
+
+/* MOMENT 4: Live Share Peer-to-Peer 3D Stage (#s5) */
+#s5{perspective:1200px}
+#p2pStage{
+  position:absolute;
+  inset:0;
+  transform-style:preserve-3d;
+  will-change:transform;
+}
+.p2p-node{
+  position:absolute;
+  top:96px;
+  width:226px;
+  height:290px;
+  border-radius:24px;
+  background:#111215;
+  border:2.5px solid rgba(245,245,242,0.85);
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:22px;
+  transform-style:preserve-3d;
+  box-shadow:0 22px 50px rgba(0,0,0,0.65);
+}
+.p2p-node::after{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,0.15);
+  transform:translateZ(-14px);
+  pointer-events:none;
+}
+.p2p-avatar{
+  width:84px;
+  height:84px;
+  border-radius:50%;
+  background:var(--wh);
+  transform:translateZ(16px);
+}
+.p2p-label{
+  font:700 24px var(--font-sans);
+  letter-spacing:-0.02em;
+  color:var(--wh);
+  transform:translateZ(14px);
+}
+.p2p-sub{
+  font:500 12px var(--font-mono);
+  letter-spacing:0.08em;
+  color:var(--gn);
+  transform:translateZ(12px);
+}
+#p2pRingWrap{
+  position:absolute;
+  left:640px;
+  top:236px;
+  width:0;
+  height:0;
+  transform-style:preserve-3d;
+}
+.ring-bar{
+  position:absolute;
+  left:-2px;
+  top:-12px;
+  width:4px;
+  height:24px;
+  border-radius:3px;
+  background:var(--gn);
+  transform-origin:50% 50%;
+  will-change:transform;
+}
+.p2p-pkt{
+  position:absolute;
+  left:0;
+  top:0;
+  width:34px;
+  height:24px;
+  margin-left:-17px;
+  margin-top:-12px;
+  border-radius:6px;
+  background:var(--wh);
+  color:var(--bk);
+  font:700 11px var(--font-mono);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 8px 20px rgba(0,0,0,0.5);
+  transform-style:preserve-3d;
+  will-change:transform,opacity;
+}
+.p2p-pkt.ret{
+  width:22px;
+  height:16px;
+  margin-left:-11px;
+  margin-top:-8px;
+  background:var(--gn);
+}
+#p2pCaption{
+  position:absolute;
+  left:440px;
+  top:358px;
+  width:400px;
+  text-align:center;
+  font:500 20px var(--font-sans);
+  letter-spacing:-0.01em;
+  color:var(--gy);
+  transform:translateZ(20px);
+}
+
+/* SCENE 7: Echoex Editorial Motion-Graphics Showcase (#sEcho, 43s–61s) */
+#sEcho{perspective:1150px}
+#echoMeshWrap{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+}
+.echo-node{
+  position:absolute;
+  width:108px;
+  height:42px;
+  margin-left:-54px;
+  margin-top:-21px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  box-sizing:border-box;
+  transition:opacity .2s;
+  will-change:transform,opacity;
+}
+.echo-node .en-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--wh);
+  box-shadow:0 0 0 3px rgba(245,245,242,0.12);
+  transition:background-color .18s,box-shadow .18s,transform .18s;
+  flex:none;
+}
+.echo-node .en-lbl{
+  font:600 10.5px var(--font-mono);
+  letter-spacing:0.09em;
+  color:var(--gy);
+  white-space:nowrap;
+  transition:color .18s;
+}
+.echo-node.en-active .en-dot{
+  background:var(--gn);
+  box-shadow:0 0 12px rgba(46,229,138,0.85),0 0 0 4px rgba(46,229,138,0.18);
+  transform:scale(1.18);
+}
+.echo-node.en-active .en-lbl{color:var(--wh)}
+.echo-node.en-compute .en-dot{
+  background:var(--gd);
+  box-shadow:0 0 14px rgba(245,196,81,0.9),0 0 0 4px rgba(245,196,81,0.22);
+  transform:scale(1.22);
+}
+.echo-node.en-compute .en-lbl{color:var(--gd)}
+
+/* Persistent Editorial Header (no pills or capsules) */
+#echoTopBar{
+  position:absolute;
+  left:80px;
+  right:80px;
+  top:34px;
+  padding-bottom:12px;
+  border-bottom:1px solid rgba(245,245,242,0.1);
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  z-index:6;
+  opacity:0;
+  pointer-events:none;
+}
+#echoTopBrand{
+  display:flex;
+  align-items:baseline;
+  gap:18px;
+}
+#echoTopTitle{
+  font:800 28px/1 var(--font-sans);
+  letter-spacing:-0.04em;
+}
+#echoTopDesc{
+  font:500 15px/1.2 var(--font-sans);
+  color:var(--gy);
+  letter-spacing:-0.01em;
+}
+#echoTopMeta{
+  font:600 11px var(--font-mono);
+  letter-spacing:0.16em;
+  color:var(--gy);
+  text-transform:uppercase;
+}
+#echoTopMeta b{
+  color:var(--gn);
+  font-weight:700;
+}
+
+/* Shared Editorial Typography Primitives for Echoex Moments */
+.echo-moment{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:5;
+  opacity:0;
+  will-change:transform,opacity;
+}
+.ed-kicker{
+  font:700 12px/1.2 var(--font-mono);
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:var(--gn);
+  margin-bottom:10px;
+}
+.ed-headline{
+  font:800 64px/1.02 var(--font-sans);
+  letter-spacing:-0.044em;
+  margin:0;
+}
+.ed-subline{
+  font:500 22px/1.35 var(--font-sans);
+  letter-spacing:-0.015em;
+  color:#d5d9e4;
+  margin:12px 0 0;
+}
+.ed-meta-row{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  margin-top:20px;
+  padding-top:14px;
+  border-top:1px solid rgba(245,245,242,0.14);
+  font:600 11.5px/1.2 var(--font-mono);
+  letter-spacing:0.14em;
+  color:var(--wh);
+  text-transform:uppercase;
+}
+.ed-meta-row i{
+  width:18px;
+  height:1px;
+  background:rgba(245,245,242,0.28);
+  display:inline-block;
+}
+
+/* Moment 1 (0.0–1.8s): Hero Mesh Introduction */
+#echoBeatA{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+#echoHeroEye{
+  font:600 13px var(--font-mono);
+  letter-spacing:0.18em;
+  color:var(--gn);
+  margin-bottom:14px;
+  text-transform:uppercase;
+}
+#echoHeroTitle{
+  font:800 136px/1.02 var(--font-sans);
+  letter-spacing:-0.048em;
+  margin:0;
+}
+#echoHeroSub{
+  margin:14px 0 0;
+  font:500 28px/1.3 var(--font-sans);
+  letter-spacing:-0.018em;
+  color:var(--wh);
+}
+
+/* Moment 2 (1.8–4.4s): Communication & Direct File Exchange */
+#commStage{
+  position:absolute;
+  left:80px;
+  right:80px;
+  top:116px;
+  height:250px;
+}
+.comm-peer{
+  position:absolute;
+  top:54px;
+  width:168px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.comm-peer.left{left:40px;text-align:left}
+.comm-peer.right{right:40px;text-align:right;align-items:flex-end}
+.comm-peer-id{
+  font:700 22px var(--font-sans);
+  letter-spacing:-0.02em;
+  color:var(--wh);
+}
+.comm-peer-role{
+  font:600 10.5px var(--font-mono);
+  letter-spacing:0.14em;
+  color:var(--gn);
+}
+.comm-chat{
+  position:absolute;
+  font:500 13px var(--font-mono);
+  letter-spacing:-0.01em;
+  color:#d5d9e4;
+  padding-left:10px;
+  border-left:2px solid var(--gn);
+  white-space:nowrap;
+}
+#commWaveWrap{
+  position:absolute;
+  left:50%;
+  top:88px;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:5px;
+  height:42px;
+}
+.comm-wave-bar{
+  width:3px;
+  height:28px;
+  background:var(--gn);
+  transform-origin:50% 50%;
+}
+.comm-file-tok{
+  position:absolute;
+  top:148px;
+  padding:6px 12px;
+  background:#111318;
+  border:1px solid rgba(245,245,242,0.28);
+  font:600 12px var(--font-mono);
+  color:var(--wh);
+  white-space:nowrap;
+  will-change:transform,opacity;
+}
+#commCopy{
+  position:absolute;
+  left:80px;
+  bottom:58px;
+  max-width:880px;
+}
+
+/* Moment 3 (4.4–7.5s): Sovereign Compute */
+#compStage{
+  position:absolute;
+  left:80px;
+  right:80px;
+  top:114px;
+  height:260px;
+}
+.comp-endpoint{
+  position:absolute;
+  top:48px;
+  width:250px;
+  padding-top:12px;
+  border-top:2px solid var(--wh);
+}
+.comp-endpoint.provider{
+  left:50px;
+  border-top-color:var(--gd);
+}
+.comp-endpoint.requester{
+  right:50px;
+  text-align:right;
+  border-top-color:rgba(245,245,242,0.45);
+}
+.comp-ep-tag{
+  font:700 10.5px var(--font-mono);
+  letter-spacing:0.15em;
+  color:var(--gd);
+  text-transform:uppercase;
+}
+.comp-ep-title{
+  font:700 24px var(--font-sans);
+  letter-spacing:-0.025em;
+  color:var(--wh);
+  margin-top:4px;
+}
+.comp-ep-sub{
+  font:500 13px var(--font-mono);
+  color:var(--gy);
+  margin-top:4px;
+}
+.comp-stream-lbl{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  font:600 11px var(--font-mono);
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.comp-pulse{
+  position:absolute;
+  width:42px;
+  height:6px;
+  background:var(--gd);
+  will-change:transform,opacity;
+}
+.comp-req-dot{
+  position:absolute;
+  width:18px;
+  height:4px;
+  background:var(--wh);
+  will-change:transform,opacity;
+}
+#compCopy{
+  position:absolute;
+  left:80px;
+  bottom:58px;
+  max-width:920px;
+}
+
+/* Moment 4 (7.5–10.4s): Sovereign Marketplace */
+#mktStage{
+  position:absolute;
+  left:80px;
+  right:80px;
+  top:108px;
+  height:270px;
+}
+.mkt-doc{
+  position:absolute;
+  background:#111318;
+  border-left:2px solid var(--gn);
+  border-top:1px solid rgba(245,245,242,0.12);
+  border-right:1px solid rgba(245,245,242,0.08);
+  border-bottom:1px solid rgba(245,245,242,0.08);
+  padding:16px 20px;
+  box-sizing:border-box;
+  will-change:transform,opacity;
+}
+.mkt-doc.primary{
+  left:40px;
+  top:22px;
+  width:410px;
+  background:#14171e;
+  border-left-width:3px;
+  box-shadow:0 18px 40px rgba(0,0,0,0.55);
+}
+.mkt-doc.sec-a{
+  left:96px;
+  top:148px;
+  width:330px;
+  border-left-color:rgba(245,245,242,0.35);
+}
+.mkt-doc.sec-b{
+  left:460px;
+  top:164px;
+  width:310px;
+  border-left-color:rgba(245,245,242,0.35);
+}
+.mkt-kicker{
+  font:600 10px var(--font-mono);
+  letter-spacing:0.15em;
+  color:var(--gn);
+  text-transform:uppercase;
+}
+.mkt-title{
+  font:700 20px var(--font-sans);
+  letter-spacing:-0.02em;
+  color:var(--wh);
+  margin-top:6px;
+}
+.mkt-doc.sec-a .mkt-title,.mkt-doc.sec-b .mkt-title{
+  font-size:15px;
+}
+.mkt-meta{
+  font:500 12px var(--font-mono);
+  color:var(--gy);
+  margin-top:6px;
+}
+#mktPeerAnchor{
+  position:absolute;
+  right:48px;
+  top:42px;
+  width:210px;
+  text-align:right;
+  padding-top:10px;
+  border-top:2px solid var(--gn);
+}
+#mktCopy{
+  position:absolute;
+  left:80px;
+  bottom:58px;
+  max-width:880px;
+}
+
+/* Moment 5 (10.4–13.0s): Pnumbri Editorial News Stream */
+#pnumStage{
+  position:absolute;
+  left:80px;
+  right:80px;
+  top:116px;
+  bottom:58px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+#pnumLead{
+  max-width:980px;
+  padding-bottom:22px;
+  border-bottom:1px solid rgba(245,245,242,0.16);
+}
+.pnum-dateline{
+  font:600 11px var(--font-mono);
+  letter-spacing:0.16em;
+  color:var(--gn);
+  text-transform:uppercase;
+  margin-bottom:10px;
+}
+.pnum-headline{
+  font:800 42px/1.08 var(--font-sans);
+  letter-spacing:-0.036em;
+  color:var(--wh);
+  margin:0;
+}
+#pnumSubDispatches{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:44px;
+  padding-top:16px;
+}
+.pnum-item{
+  border-left:2px solid rgba(245,245,242,0.28);
+  padding-left:16px;
+}
+.pnum-item-id{
+  font:600 10.5px var(--font-mono);
+  letter-spacing:0.14em;
+  color:var(--gy);
+}
+.pnum-item-txt{
+  font:600 17px/1.35 var(--font-sans);
+  letter-spacing:-0.015em;
+  color:#d5d9e4;
+  margin-top:6px;
+}
+#pnumFooter{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  padding-top:14px;
+  border-top:1px solid rgba(245,245,242,0.12);
+}
+
+/* Moment 6 (13.0–16.6s): Quest Public Work & Private Route Tracking */
+#questMapWrap{
+  position:absolute;
+  left:470px;
+  top:102px;
+  width:730px;
+  height:430px;
+  border:1px solid rgba(245,245,242,0.14);
+  background:rgba(10,12,15,0.86);
+  overflow:hidden;
+}
+#questMapSvg{
+  width:100%;
+  height:100%;
+  display:block;
+}
+#questMapHud{
+  position:absolute;
+  left:20px;
+  right:20px;
+  top:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font:600 10.5px var(--font-mono);
+  letter-spacing:0.14em;
+  color:var(--gy);
+}
+#questCopyCol{
+  position:absolute;
+  left:80px;
+  top:116px;
+  width:356px;
+  height:416px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+#questStageIndicator{
+  padding-left:14px;
+  border-left:2px solid var(--wh);
+  transition:border-color .2s;
+}
+#questBriefBox{
+  padding:16px 0;
+  border-top:1px solid rgba(245,245,242,0.14);
+  border-bottom:1px solid rgba(245,245,242,0.14);
+}
+.qb-label{
+  font:600 10.5px var(--font-mono);
+  letter-spacing:0.15em;
+  color:var(--gy);
+  text-transform:uppercase;
+}
+.qb-title{
+  font:700 20px/1.25 var(--font-sans);
+  letter-spacing:-0.02em;
+  color:var(--wh);
+  margin-top:6px;
+}
+.qb-status{
+  font:600 11.5px var(--font-mono);
+  letter-spacing:0.12em;
+  color:var(--gn);
+  margin-top:10px;
+  text-transform:uppercase;
+}
+
+/* Moment 7 (16.6–18.0s): Open Ecosystem Synthesis */
+.synth-callout{
+  position:absolute;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  pointer-events:none;
+}
+.synth-callout b{
+  display:block;
+  font:700 12px var(--font-mono);
+  letter-spacing:0.14em;
+  color:var(--wh);
+  text-transform:uppercase;
+}
+.synth-callout span{
+  display:block;
+  font:500 12px var(--font-sans);
+  color:var(--gy);
+  margin-top:3px;
+}
+#echoSynthCopy{
+  position:absolute;
+  left:80px;
+  right:80px;
+  bottom:56px;
+  padding-top:18px;
+  border-top:1px solid rgba(245,245,242,0.15);
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+}
+#echoFinalTitle{
+  font:800 58px/1.04 var(--font-sans);
+  letter-spacing:-0.044em;
+  margin:0;
+}
+#echoFinalSub{
+  font:600 13px/1.4 var(--font-mono);
+  letter-spacing:0.14em;
+  color:var(--wh);
+  text-transform:uppercase;
+  margin:0;
+}
+
+svg.fs{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* SECTION 5: 8-Second Finale (#s6) */
+#s6{perspective:1000px}
+/* Beat A: Coherent Supercut */
+#finSuper{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:8;
+}
+.sc-card{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:720px;
+  height:360px;
+  margin-left:-360px;
+  margin-top:-180px;
+  background:#101115;
+  border:1.5px solid #2e323d;
+  border-radius:20px;
+  box-sizing:border-box;
+  padding:30px 38px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  opacity:0;
+  box-shadow:0 30px 80px rgba(0,0,0,0.75);
+}
+.sc-top{display:flex;align-items:center;justify-content:space-between}
+.sc-eyebrow{font:700 13px var(--font-mono);letter-spacing:0.12em;color:var(--gn);text-transform:uppercase}
+.sc-step{font:600 12px var(--font-mono);color:var(--gy);letter-spacing:0.08em}
+.sc-main{font:800 54px/1.08 var(--font-sans);letter-spacing:-0.04em;color:var(--wh)}
+.sc-Artifact{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:12px 16px;
+  border-radius:10px;
+  background:#16181f;
+  border:1px solid #292d38;
+  font:600 16px var(--font-mono);
+  color:var(--wh);
+}
+.sc-Artifact.white-doc{
+  background:#F4F4F0;
+  color:#111215;
+  border-color:#D8D8D2;
+}
+.sc-badge{
+  margin-left:auto;
+  padding:4px 10px;
+  border-radius:5px;
+  font:700 11px var(--font-sans);
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+}
+.sc-foot{font:500 16px var(--font-mono);color:var(--gy);display:flex;justify-content:space-between;align-items:center}
+
+/* Beat B & Beat C: Meaningful Collapse directly into Numerical Callback */
+#collapseStage{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:9;
+}
+.col-frag{
+  position:absolute;
+  left:640px;
+  top:360px;
+  padding:10px 18px;
+  border-radius:10px;
+  background:#14161b;
+  border:1.5px solid #353945;
+  font:600 15px var(--font-mono);
+  color:var(--wh);
+  white-space:nowrap;
+  transform:translate(-50%,-50%);
+  opacity:0;
+  will-change:transform,opacity;
+  box-shadow:0 12px 28px rgba(0,0,0,0.55);
+}
+.col-frag.frag-doc{
+  background:#F4F4F0;
+  color:#111215;
+  border-color:var(--rd);
+}
+#focalRing{
+  position:absolute;
+  left:640px;
+  top:360px;
+  width:180px;
+  height:180px;
+  margin-left:-90px;
+  margin-top:-90px;
+  border-radius:50%;
+  border:2px solid var(--gn);
+  opacity:0;
+  pointer-events:none;
+  will-change:transform,opacity;
+}
+
+/* Beat C: Callback ("Thousands of files." -> "Thousands renamed.") + speed microcopy */
+#cbStage{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  pointer-events:none;
+  opacity:0;
+  z-index:7;
+}
+#cbStage::before{
+  content:"";
+  position:absolute;
+  width:980px;
+  height:320px;
+  background:radial-gradient(ellipse at center,rgba(221,225,236,0.12) 0%,rgba(46,229,138,0.04) 48%,transparent 72%);
+  pointer-events:none;
+}
+#cbWrap{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:20px;
+  height:124px;
+  font-family:var(--font-sans);
+  font-weight:800;
+  font-size:102px;
+  letter-spacing:-0.045em;
+  line-height:124px;
+  padding:0;
+  margin:0;
+}
+#cbNum{
+  display:flex;
+  align-items:center;
+  height:124px;
+  line-height:124px;
+  white-space:nowrap;
+  padding:0 0.04em 0.08em 0;
+  margin:0;
+}
+#cbWordBox{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  perspective:900px;
+  height:124px;
+  width:416px;
+}
+#cbFlipper{
+  position:relative;
+  display:grid;
+  grid-template-areas:"slot";
+  align-items:center;
+  width:100%;
+  height:124px;
+  transform-style:preserve-3d;
+  transform-origin:50% 50%;
+}
+.cb-face{
+  grid-area:slot;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  height:124px;
+  line-height:124px;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  white-space:nowrap;
+  padding:0 0.06em 0.08em 0;
+  margin:0;
+}
+.cb-back{
+  transform:rotateX(-180deg);
+}
+#cbSub{
+  margin:0;
+  font:500 22px/1.35 var(--font-sans);
+  letter-spacing:-0.012em;
+  color:var(--gy);
+  text-align:center;
+  opacity:0;
+  will-change:transform,opacity;
+}
+
+/* Beat D & E: Abstract Color-Bar Transition & Brand Resolution */
+#brandStage{
+  position:absolute;
+  inset:0;
+  opacity:0;
+}
+#mk{
+  position:absolute;
+  left:80px;
+  top:54px;
+  font-family:var(--font-sans);
+  font-weight:900;
+  font-size:42px;
+  letter-spacing:-0.03em;
+  color:var(--wh);
+}
+.tg{
+  position:absolute;
+  left:80px;
+  overflow:hidden;
+  height:132px;
+  font-family:var(--font-sans);
+  font-weight:800;
+  font-size:100px;
+  letter-spacing:-0.045em;
+  line-height:1.12;
+  white-space:nowrap;
+}
+.tg span{
+  display:block;
+  padding:0.04em 0.08em 0.14em 0;
+  background:linear-gradient(180deg,#FFFFFF 0%,#DDE1EC 54%,#8B93AA 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:var(--wh);
+}
+#brandGlow{
+  position:absolute;
+  left:20px;
+  top:130px;
+  width:1040px;
+  height:320px;
+  background:radial-gradient(ellipse at 42% 50%,rgba(221,225,236,0.12) 0%,rgba(139,147,170,0.04) 50%,transparent 75%);
+  pointer-events:none;
+}
+#tb{
+  position:absolute;
+  left:80px;
+  top:442px;
+  width:540px;
+  height:10px;
+  display:flex;
+  gap:8px;
+  perspective:600px;
+  z-index:6;
+}
+#tb i{
+  flex:1;
+  border-radius:5px;
+  transform-origin:0 50%;
+  will-change:transform,opacity;
+}
+#cta{
+  position:absolute;
+  left:80px;
+  top:504px;
+  background:var(--wh);
+  color:var(--bk);
+  font:700 34px var(--font-mono);
+  letter-spacing:-0.02em;
+  padding:16px 36px;
+  border-radius:99px;
+  box-shadow:0 14px 36px rgba(0,0,0,0.5);
+}
+#sub6{
+  position:absolute;
+  left:80px;
+  top:614px;
+  margin:0;
+  font:500 23px var(--font-sans);
+  letter-spacing:-0.015em;
+  color:var(--gy);
+}
+
+/* Transitions & Overlays */
+#tx{position:absolute;inset:0;display:flex;flex-direction:column;pointer-events:none;z-index:10}#tx.v{flex-direction:row}
+#tx i{flex:1;transform:translateX(-101%)}
+#fl{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:11}
+#gr{position:absolute;inset:-50px;opacity:.07;pointer-events:none;z-index:12;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");animation:gr .4s steps(4) infinite}
+@keyframes gr{25%{transform:translate(-20px,10px)}50%{transform:translate(15px,-25px)}75%{transform:translate(-10px,-5px)}}
+#vg{position:absolute;inset:0;pointer-events:none;z-index:13;background:radial-gradient(ellipse at center,transparent 52%,rgba(0,0,0,.72))}
+#go{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  background:var(--wh);
+  color:var(--bk);
+  border:0;
+  border-radius:99px;
+  font:800 26px var(--font-sans);
+  letter-spacing:-0.02em;
+  padding:18px 38px;
+  cursor:pointer;
+  z-index:20;
+  box-shadow:0 16px 48px rgba(0,0,0,0.7);
+}
+#ctl{display:flex;align-items:center;gap:14px;width:min(1000px,94vw);font:500 14px var(--font-mono)}
+#ctl button{background:transparent;color:var(--wh);border:1.5px solid rgba(245,245,242,0.75);border-radius:99px;padding:6px 16px;font:600 13px var(--font-sans);letter-spacing:-0.01em;cursor:pointer}
+#ctl button:hover{border-color:var(--wh);background:rgba(255,255,255,0.06)}
+#sk{flex:1;accent-color:var(--gn);cursor:pointer}
+#tm{font-variant-numeric:tabular-nums;color:var(--gy);min-width:96px;text-align:right}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gn);outline-offset:3px}
+</style></head><body>
+<div id="box"><div id="st"><div id="cam">
+
+<!-- SCENE 1: Dimensional Filename Tunnel (0s–6s) -->
+<section class="sc" id="s1">
+  <div id="tunnelStage">
+    <div id="wall"></div>
+    <div id="fn"></div>
+  </div>
+  <div id="sl"><span id="slText" class="grad-text"></span></div>
+</section>
+
+<!-- SCENE 2: Split-Flap Batch Rename (6s–17s) -->
+<section class="sc" id="s2">
+  <div id="big"><i class="ic"></i><span id="nm"></span><span id="chk">✓</span></div>
+  <div id="cap">Pattern: CAMPAIGN_{n}</div>
+  <div id="bgRows"></div>
+  <div id="rows"></div>
+  <div id="cnt">BATCH COMPLETE ✓</div>
+  <h2 class="h" id="h2" style="bottom:148px;font-size:82px">
+    <span class="h2-line" id="h2L1">Thousands renamed.</span>
+    <span class="h2-line h2-gn" id="h2L2">In seconds.</span>
+  </h2>
+  <p id="s2Sub">Processed locally. No upload queue.</p>
+  <div id="pills"></div>
+</section>
+
+<!-- SCENE 3: Metadata Inspection, Editing & Removal (17s–22s) -->
+<section class="sc" id="sMeta">
+  <div id="metaEyebrow">METADATA / EXIF / XMP / IPTC</div>
+  <div id="metaFileCard">
+    <div id="metaFileIcon"></div>
+    <div id="metaFilename">IMG_0092.JPG</div>
+    <div id="metaFileType">JPEG IMAGE · EXAMPLE FILE</div>
+  </div>
+  <div id="metaPanel">
+    <div id="metaPanelHead"><span>FIELD</span><span>VALUE</span><span>RESULT</span></div>
+    <div class="metaRow"><span class="metaField">EXIF · Date captured</span><span class="metaValue" data-before="2024:08:17 10:42:06" data-after="2026:10:14 09:30:00">2024:08:17 10:42:06</span><span class="metaState">ORIGINAL</span></div>
+    <div class="metaRow"><span class="metaField">GPS · Coordinates</span><span class="metaValue" data-before="14.5995° N, 120.9842° E" data-after="[REMOVED]">14.5995° N, 120.9842° E</span><span class="metaState">PRESENT</span></div>
+    <div class="metaRow"><span class="metaField">XMP · Creator</span><span class="metaValue" data-before="Studio Team" data-after="Studio Team">Studio Team</span><span class="metaState">PRESERVED</span></div>
+    <div class="metaRow"><span class="metaField">IPTC · Copyright</span><span class="metaValue" data-before="© 2026 Studio" data-after="© 2026 Studio">© 2026 Studio</span><span class="metaState">PRESERVED</span></div>
+  </div>
+  <div id="metaScan"></div>
+  <h2 class="h" id="hMeta" style="font-size:78px;bottom:94px"><span>Every detail.</span><span>Under control.</span></h2>
+  <p class="sub" id="pMeta">Inspect. Edit. Remove what you don't need.</p>
+</section>
+
+<!-- SCENE 4: Accurate PII & API-Key Scanning (22s–29s) -->
+<section class="sc" id="s3">
+  <div id="scanEyebrow">SENSITIVE DATA SCAN · PII &amp; SECRET DETECTION</div>
+  <div id="docs"></div>
+  <div id="scan"></div>
+  <div id="scanHud">
+    <div class="hud-pill" id="hudEngine">ENGINE <b>LOCAL PATTERN + ENTROPY</b></div>
+    <div class="hud-pill" id="hudPii">PII DETECTED <b id="piiCnt">0</b></div>
+    <div class="hud-pill" id="hudKey">API KEYS DETECTED <b id="keyCnt">0</b></div>
+    <div class="hud-pill" id="hudTotal">FLAGGED <b id="totCnt">0 / 5</b></div>
+  </div>
+  <h2 class="h" id="h3" style="font-size:84px"><span>Find what shouldn't leave.</span></h2>
+  <p class="sub" id="p3">Scanned on your device. Nothing uploaded.</p>
+</section>
+
+<!-- SCENE 5: Local Processing & Privacy 3D Glass Cube (29s–36s) -->
+<section class="sc" id="s4">
+  <div id="cubeStage">
+    <div id="glassCube">
+      <div class="cube-face cf-front"></div>
+      <div class="cube-face cf-back"></div>
+      <div class="cube-face cf-right"></div>
+      <div class="cube-face cf-left"></div>
+      <div class="cube-face cf-top"></div>
+      <div class="cube-face cf-bottom"></div>
+    </div>
+  </div>
+  <div id="localTag">100% LOCAL ENCLOSURE</div>
+  <svg class="fs" id="v4" viewBox="0 0 1280 720"></svg>
+  <h2 class="h" id="h4"><span>Your files never</span><span>leave your device.</span></h2>
+  <p class="sub" id="p4">Batch edits, scans and AI run on your machine.</p>
+</section>
+
+<!-- SCENE 6: Live Share Peer-to-Peer 3D Composition (36s–43s) -->
+<section class="sc" id="s5">
+  <div id="p2pStage">
+    <svg class="fs" id="v5" viewBox="0 0 1280 720"></svg>
+    <div class="p2p-node" id="nodeHost" style="left:150px">
+      <div class="p2p-avatar"></div>
+      <div class="p2p-label">Host</div>
+      <div class="p2p-sub">DIRECT ENDPOINT</div>
+    </div>
+    <div class="p2p-node" id="nodeGuest" style="left:904px">
+      <div class="p2p-avatar"></div>
+      <div class="p2p-label">Guest</div>
+      <div class="p2p-sub">PEER VERIFIED</div>
+    </div>
+    <div id="p2pRingWrap"></div>
+    <div id="p2pPkts"></div>
+    <div id="p2pCaption">Echoex · voice, chat, files</div>
+  </div>
+  <h2 class="h" id="h5"><span>Share live,</span><span>device to device.</span></h2>
+  <p class="sub" id="p5">Files, chat and voice go peer to peer.</p>
+</section>
+
+<!-- SCENE 7: Dedicated Echoex Ecosystem Showcase (43s–61s, 18s) -->
+<section class="sc" id="sEcho">
+  <div id="echoMeshWrap">
+    <svg class="fs" id="vEcho" viewBox="0 0 1280 720"></svg>
+    <div id="echoNodes"></div>
+  </div>
+  <div id="echoTopBar">
+    <div id="echoTopBrand">
+      <span id="echoTopTitle" class="grad-text">ECHOEX</span>
+      <span id="echoTopDesc">An ephemeral mesh inside BulkMetaEdit.</span>
+    </div>
+    <span id="echoTopMeta">COLLECTIVE MESH ARCHITECTURE &nbsp;/&nbsp; <b id="echoTopPhase">EPHEMERAL BY DESIGN</b></span>
+  </div>
+
+  <!-- Moment 1 (0.0–1.8s): Introduce Echoex & Collective Mesh -->
+  <div class="echo-moment" id="echoBeatA">
+    <div id="echoHeroEye">COLLECTIVE MESH ARCHITECTURE</div>
+    <h2 id="echoHeroTitle" class="grad-text">ECHOEX</h2>
+    <p id="echoHeroSub">An ephemeral mesh inside BulkMetaEdit.</p>
+  </div>
+
+  <!-- Moment 2 (1.8–4.4s): Communication & Direct File Exchange -->
+  <div class="echo-moment" id="echoBeatB">
+    <div id="commStage">
+      <div class="comm-peer left">
+        <span class="comm-peer-role">MESH ENDPOINT A</span>
+        <span class="comm-peer-id">Peer_01</span>
+      </div>
+      <div class="comm-peer right">
+        <span class="comm-peer-role">MESH ENDPOINT B</span>
+        <span class="comm-peer-id">Peer_02</span>
+      </div>
+      <div class="comm-chat" id="chatFrag1" style="left:240px;top:38px">“Cut 04 graded — sending master stem”</div>
+      <div class="comm-chat" id="chatFrag2" style="right:240px;top:42px;border-left:0;border-right:2px solid var(--wh);padding-left:0;padding-right:10px">“Receiving direct stream now”</div>
+      <div id="commWaveWrap"></div>
+      <div id="commFilesWrap"></div>
+    </div>
+    <div id="commCopy">
+      <div class="ed-kicker">VOICE · LIVE CHAT · DIRECT FILE STREAM</div>
+      <h3 class="ed-headline grad-text">No login. No user data saved.</h3>
+      <p class="ed-subline" style="color:var(--gn)">Any file type. No imposed file-size cap.</p>
+      <div class="ed-meta-row">
+        <span>EPHEMERAL BY DESIGN</span><i></i><span>NO ACCOUNT REQUIRED</span><i></i><span>ZERO CLOUD ARCHIVE</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Moment 3 (4.4–7.5s): Sovereign Compute -->
+  <div class="echo-moment" id="echoBeatC">
+    <div id="compStage">
+      <div class="comp-endpoint provider">
+        <div class="comp-ep-tag">LOCAL COMPUTE PROVIDER</div>
+        <div class="comp-ep-title">Node_03 · Self-Hosted AI</div>
+        <div class="comp-ep-sub">Offering local inference capacity</div>
+      </div>
+      <div class="comp-endpoint requester">
+        <div class="comp-ep-tag" style="color:var(--wh)">REQUESTING PARTICIPANT</div>
+        <div class="comp-ep-title">Peer_02 · Mesh Client</div>
+        <div class="comp-ep-sub">Direct peer compute route</div>
+      </div>
+      <div class="comp-stream-lbl" id="compReqLbl" style="top:64px;color:var(--gy)">01 · PROMPT / JOB REQUEST →</div>
+      <div class="comp-stream-lbl" id="compInfLbl" style="top:148px;color:var(--gd)">← 02 · LIVE INFERENCE STREAM</div>
+      <div id="compStreamNodes"></div>
+    </div>
+    <div id="compCopy">
+      <div class="ed-kicker" style="color:var(--gd)">SOVEREIGN COMPUTE</div>
+      <h3 class="ed-headline grad-text">Host your own AI compute. Offer it directly.</h3>
+      <p class="ed-subline">Independent participants share self-hosted AI capacity across the mesh.</p>
+      <div class="ed-meta-row" style="color:var(--gd)">
+        <span>NO ACCOUNT REQUIRED</span><i></i><span>NO PLATFORM FEES</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Moment 4 (7.5–10.4s): Sovereign Marketplace -->
+  <div class="echo-moment" id="echoBeatD">
+    <div id="mktStage">
+      <div class="mkt-doc primary" id="mktDoc1">
+        <div class="mkt-kicker">DIRECT LISTING · 01</div>
+        <div class="mkt-title">Studio LUT &amp; Camera Profile Pack</div>
+        <div class="mkt-meta">Offered by Peer_01 · Direct peer-to-peer transfer</div>
+      </div>
+      <div class="mkt-doc sec-a" id="mktDoc2">
+        <div class="mkt-kicker" style="color:var(--gy)">LISTING · 02</div>
+        <div class="mkt-title">Archival Surface Texture Set</div>
+      </div>
+      <div class="mkt-doc sec-b" id="mktDoc3">
+        <div class="mkt-kicker" style="color:var(--gy)">LISTING · 03</div>
+        <div class="mkt-title">Batch EXIF Audit Pipeline</div>
+      </div>
+      <div id="mktPeerAnchor">
+        <div class="mkt-kicker">INTERESTED PARTICIPANT</div>
+        <div class="mkt-title" style="font-size:22px">Peer_02</div>
+        <div class="mkt-meta" style="color:var(--gn)">DIRECT EXCHANGE ACTIVE</div>
+      </div>
+    </div>
+    <div id="mktCopy">
+      <div class="ed-kicker">SOVEREIGN MARKETPLACE</div>
+      <h3 class="ed-headline grad-text">Sovereign Marketplace.</h3>
+      <p class="ed-subline">Discover. Offer. Exchange directly.</p>
+      <div class="ed-meta-row">
+        <span>NO ACCOUNT REQUIRED</span><i></i><span style="color:var(--gn)">NO PLATFORM FEES</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Moment 5 (10.4–13.0s): Pnumbri Editorial News Stream -->
+  <div class="echo-moment" id="echoBeatE">
+    <div id="pnumStage">
+      <div id="pnumLead">
+        <div class="pnum-dateline">MESH DISPATCH 01 &nbsp;·&nbsp; CIRCULATING ACROSS NODES</div>
+        <h3 class="pnum-headline grad-text">Open mesh relay specification published for direct peer media workflows.</h3>
+      </div>
+      <div id="pnumSubDispatches">
+        <div class="pnum-item" id="pnumItem2">
+          <div class="pnum-item-id">DISPATCH 02 &nbsp;/&nbsp; PIPELINE NOTE</div>
+          <div class="pnum-item-txt">Deterministic EXIF &amp; XMP stripping rules shared across studio nodes.</div>
+        </div>
+        <div class="pnum-item" id="pnumItem3">
+          <div class="pnum-item-id">DISPATCH 03 &nbsp;/&nbsp; COMPUTE RELAY</div>
+          <div class="pnum-item-txt">Self-hosted vision tagging nodes available for local batch indexing.</div>
+        </div>
+      </div>
+      <div id="pnumFooter">
+        <div>
+          <span class="ed-headline grad-text" style="font-size:52px;margin-right:18px">PNUMBRI</span>
+          <span style="font:500 22px var(--font-sans);color:#d5d9e4">The sovereign mesh news feed.</span>
+        </div>
+        <span style="font:600 11.5px var(--font-mono);letter-spacing:0.15em;color:var(--wh)">NO ACCOUNT REQUIRED</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Moment 6 (13.0–16.6s): Quest Public Work & Private Route Tracking -->
+  <div class="echo-moment" id="echoBeatF">
+    <div id="questCopyCol">
+      <div>
+        <div class="ed-kicker" id="questKicker">QUEST &nbsp;·&nbsp; STAGE 01</div>
+        <h3 class="ed-headline grad-text" style="font-size:56px">QUEST</h3>
+        <p class="ed-subline" style="font-size:19px;margin-top:8px">Public work posting. Paired private route execution.</p>
+      </div>
+      <div id="questBriefBox">
+        <div class="qb-label" id="questBriefTag">PUBLIC WORK POSTING</div>
+        <div class="qb-title">Deliver on-site RAW capture batch &amp; calibration slate</div>
+        <div class="qb-status" id="questBriefStatus">OPEN ON MESH · VISIBLE TO PEERS</div>
+      </div>
+      <div id="questStageIndicator">
+        <div id="questPrivacyLine1" style="font:700 13px var(--font-mono);letter-spacing:0.13em;color:var(--wh)">PUBLIC WORK POSTING</div>
+        <div id="questPrivacyLine2" style="font:500 12px var(--font-mono);letter-spacing:0.11em;color:var(--gy);margin-top:6px">NO ACCOUNT REQUIRED</div>
+      </div>
+    </div>
+    <div id="questMapWrap">
+      <div id="questMapHud">
+        <span id="questMapMode">SECTOR GRID · PUBLIC DISCOVERY</span>
+        <span id="questMapScope" style="color:var(--wh)">MESH VISIBILITY: PUBLIC BRIEF</span>
+      </div>
+      <svg id="questMapSvg" viewBox="0 0 730 430">
+        <!-- Subtle abstract 2D street & block contours -->
+        <g stroke="rgba(245,245,242,0.06)" stroke-width="1" fill="none">
+          <line x1="0" y1="86" x2="730" y2="86"/>
+          <line x1="0" y1="172" x2="730" y2="172"/>
+          <line x1="0" y1="258" x2="730" y2="258"/>
+          <line x1="0" y1="344" x2="730" y2="344"/>
+          <line x1="146" y1="0" x2="146" y2="430"/>
+          <line x1="292" y1="0" x2="292" y2="430"/>
+          <line x1="438" y1="0" x2="438" y2="430"/>
+          <line x1="584" y1="0" x2="584" y2="430"/>
+        </g>
+        <!-- Understated arterial road contours -->
+        <g stroke="rgba(245,245,242,0.12)" stroke-width="2" fill="none">
+          <path d="M 40 330 L 190 330 L 250 245 L 420 245 L 485 140 L 670 140"/>
+          <path d="M 146 60 L 146 330 L 310 380 L 584 380"/>
+          <path d="M 250 70 L 420 245 L 540 310 L 690 310"/>
+        </g>
+        <!-- Public mesh observer nodes on map (dimmed during private route stage) -->
+        <g id="questPublicObservers">
+          <circle cx="146" cy="120" r="4" fill="#8A8A86"/>
+          <text x="158" y="124" fill="#8A8A86" font-family="JetBrains Mono,monospace" font-size="10">PUBLIC_NODE</text>
+          <circle cx="540" cy="310" r="4" fill="#8A8A86"/>
+          <text x="552" y="314" fill="#8A8A86" font-family="JetBrains Mono,monospace" font-size="10">PUBLIC_NODE</text>
+          <circle cx="292" cy="368" r="4" fill="#8A8A86"/>
+          <text x="304" y="372" fill="#8A8A86" font-family="JetBrains Mono,monospace" font-size="10">PUBLIC_NODE</text>
+        </g>
+        <!-- Direct paired privacy corridor line (A <-> B) -->
+        <line id="questPairLink" x1="130" y1="330" x2="590" y2="140" stroke="rgba(46,229,138,0.22)" stroke-width="1.5" stroke-dasharray="4 8" opacity="0"/>
+        <!-- A -> B Private Route Path (length = 640) -->
+        <path id="questRouteBg" d="M 130 330 L 190 330 L 250 245 L 420 245 L 485 140 L 590 140" fill="none" stroke="rgba(46,229,138,0.18)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
+        <path id="questRouteLine" d="M 130 330 L 190 330 L 250 245 L 420 245 L 485 140 L 590 140" fill="none" stroke="#2EE58A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="640" stroke-dashoffset="640"/>
+        <!-- Origin Marker A (Requester) -->
+        <g id="questMarkerA" opacity="0">
+          <circle cx="130" cy="330" r="14" fill="rgba(245,245,242,0.12)" stroke="#F5F5F2" stroke-width="1.5"/>
+          <circle cx="130" cy="330" r="5" fill="#F5F5F2"/>
+          <text x="130" y="362" text-anchor="middle" fill="#F5F5F2" font-family="JetBrains Mono,monospace" font-weight="700" font-size="11">A · REQUESTER</text>
+        </g>
+        <!-- Destination Marker B (Assigned Peer Target) -->
+        <g id="questMarkerB" opacity="0">
+          <circle cx="590" cy="140" r="14" fill="rgba(46,229,138,0.15)" stroke="#2EE58A" stroke-width="1.5"/>
+          <circle cx="590" cy="140" r="5" fill="#2EE58A"/>
+          <text x="590" y="114" text-anchor="middle" fill="#2EE58A" font-family="JetBrains Mono,monospace" font-weight="700" font-size="11">B · DESTINATION</text>
+        </g>
+        <!-- Moving Directional Tracker Marker along A -> B -->
+        <g id="questMover" opacity="0">
+          <circle cx="0" cy="0" r="11" fill="rgba(46,229,138,0.22)"/>
+          <polygon points="8,0 -6,-5 -3,0 -6,5" fill="#2EE58A"/>
+          <text x="0" y="-16" text-anchor="middle" fill="#2EE58A" font-family="JetBrains Mono,monospace" font-weight="700" font-size="10">ASSIGNED PEER</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Moment 7 (16.6–18.0s): Open Mesh Ecosystem Synthesis -->
+  <div class="echo-moment" id="echoBeatG">
+    <div class="synth-callout" style="left:210px;top:175px">
+      <b>LIVE SHARE</b><span>Voice, chat &amp; files</span>
+    </div>
+    <div class="synth-callout" style="left:450px;top:125px">
+      <b style="color:var(--gd)">SOVEREIGN COMPUTE</b><span>Self-hosted AI capacity</span>
+    </div>
+    <div class="synth-callout" style="left:830px;top:125px">
+      <b style="color:var(--gn)">SOVEREIGN MARKETPLACE</b><span>Direct peer exchange</span>
+    </div>
+    <div class="synth-callout" style="left:1070px;top:175px">
+      <b>PNUMBRI</b><span>Sovereign mesh news feed</span>
+    </div>
+    <div class="synth-callout" style="left:640px;top:295px">
+      <b style="color:var(--gn)">QUEST</b><span>Public work &amp; private route</span>
+    </div>
+    <div id="echoSynthCopy">
+      <h2 id="echoFinalTitle" class="grad-text">An ephemeral mesh inside BulkMetaEdit.</h2>
+      <p id="echoFinalSub">NO LOGIN &nbsp;·&nbsp; NO USER DATA SAVED</p>
+    </div>
+  </div>
+</section>
+
+<!-- SCENE 8: Eight-Second Five-Beat Finale (61s–69s) -->
+<section class="sc" id="s6">
+  <!-- Beat A: Supercut -->
+  <div id="finSuper"></div>
+  <!-- Beat B: Collapse converging directly into Beat C focal point -->
+  <div id="collapseStage"><div id="focalRing"></div></div>
+  <!-- Beat C: Callback + Speed Editorial Microcopy -->
+  <div id="cbStage">
+    <div id="cbWrap">
+      <span id="cbNum" class="grad-text">Thousands</span>
+      <span id="cbWordBox">
+        <span id="cbFlipper">
+          <span class="cb-face cb-front grad-text">of files.</span>
+          <span class="cb-face cb-back grad-text-gn">renamed.</span>
+        </span>
+      </span>
+    </div>
+    <p id="cbSub">In seconds, on your machine.</p>
+  </div>
+  <!-- Beat D: Abstract Color-Bar Transition (unlabeled art direction) -->
+  <div id="tb">
+    <i style="background:var(--wh)"></i>
+    <i style="background:var(--gn)"></i>
+    <i style="background:linear-gradient(90deg,var(--rd),var(--or),var(--gd))"></i>
+  </div>
+  <!-- Beat E: Brand Resolution -->
+  <div id="brandStage">
+    <div id="brandGlow"></div>
+    <div id="mk">BME</div>
+    <div class="tg" style="top:156px"><span>Process in bulk.</span></div>
+    <div class="tg" style="top:274px"><span>Collaborate in private.</span></div>
+    <div id="cta">bulkmetaedit.me</div>
+    <p id="sub6">Free to start. Your files stay on your device.</p>
+  </div>
+</section>
+
+</div><div id="tx"></div><div id="fl"></div><div id="gr"></div><div id="vg"></div></div>
+<button id="go">Play film (sound on)</button></div>
+<div id="ctl">
+  <button id="pp">Play</button>
+  <input id="sk" type="range" min="0" max="6900" value="0" aria-label="Timeline">
+  <span id="tm">0:00 / 1:09</span>
+  <button id="mu">Mute</button>
+</div>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)),pr=(t,a,b)=>cl((t-a)/(b-a)),eo=x=>1-(1-x)**3,eio=x=>x<.5?4*x*x*x:1-(-2*x+2)**3/2,ob=x=>1+2.7*(x-1)**3+1.7*(x-1)**2;
+/* Extended runtime: 69s total (sEcho is 18s: 43s–61s; s6 finale is 8s: 61s–69s) */
+const T=69,B=[0,6,17,22,29,36,43,61,69],SC=$$('.sc');
+const ce=(g,c,h,p)=>{const e=document.createElement(g);if(c)e.className=c;if(h)e.innerHTML=h;p&&p.appendChild(e);return e};
+const se=(g,a,p)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',g);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+const rv=(e,p)=>{e.style.opacity=p;e.style.transform=`translateY(${(1-eo(p))*36}px)`};
+const sm=(e,u,t0)=>{e.style.opacity=u>=t0?1:0;e.style.transform=`scale(${1+.22*(1-eo(pr(u,t0,t0+.14)))})`};
+
+let t=0,pt=0,pl=false,L=0,ls=-1,l4=-1,ln=-1,lc=-1,lk=-1,lp=-1,lcT=0,shk=0,started=false,muted=false,ac,mg,pad,padGain,rvb,NB;
+
+/* Measure the actual rendered Inter font width of the two suffix faces so the suffix slot
+   matches the wider phrase without arbitrary oversized boxes or off-center padding. */
+function syncCallbackSlotMetrics(){
+  const wordBox=$('#cbWordBox');
+  const front=$('.cb-front');
+  const back=$('.cb-back');
+  if(!wordBox||!front||!back)return;
+  const c=document.createElement('canvas').getContext('2d');
+  if(c){
+    c.font='800 102px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    /* Account for -0.045em letter-spacing across character count */
+    const lsPx=-0.045*102;
+    const mW=txt=>c.measureText(txt).width+Math.max(0,txt.length-1)*lsPx+10;
+    const w=Math.ceil(Math.max(mW('of files.'),mW('renamed.')));
+    wordBox.style.width=w+'px';
+  }
+}
+syncCallbackSlotMetrics();
+if(document.fonts&&document.fonts.ready){
+  document.fonts.ready.then(syncCallbackSlotMetrics);
+}
+
+/* Instrumental Web Audio Synthesizer */
+const nt=n=>440*2**((n-69)/12),CH=[[45,52,57,60],[41,48,53,57],[48,55,60,64],[43,50,55,59],[45,52,57,60],[41,48,53,60],[43,50,57,62],[45,52,57,64]],P=[57,60,64,67,69,72,76,79,81,84],AR=[0,2,1,3,2,4,3,5];
+function audio(){
+  if(ac)return;
+  ac=new(window.AudioContext||window.webkitAudioContext)();
+  const cp=ac.createDynamicsCompressor();cp.threshold.value=-20;cp.ratio.value=6;
+  mg=ac.createGain();mg.gain.value=0;mg.connect(cp);cp.connect(ac.destination);
+  const n=ac.sampleRate*1.8,ib=ac.createBuffer(2,n,ac.sampleRate);
+  for(let c=0;c<2;c++){const d=ib.getChannelData(c);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n)**2.5}
+  rvb=ac.createConvolver();rvb.buffer=ib;
+  const w=ac.createGain();w.gain.value=.45;rvb.connect(w);w.connect(mg);
+  const lpF=ac.createBiquadFilter();lpF.type='lowpass';lpF.frequency.value=900;
+  padGain=ac.createGain();padGain.gain.value=1;
+  lpF.connect(padGain);padGain.connect(mg);padGain.connect(rvb);
+  pad=[0,1,2,3].map(i=>{
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.type=i<2?'sine':'triangle';o.detune.value=(i-1.5)*5;g.gain.value=.07;
+    o.connect(g);g.connect(lpF);o.start();return o;
+  });
+  NB=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);
+  const d=NB.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  score(ls<0?0:ls);
+}
+function score(i){if(ac)pad.forEach((o,k)=>o.frequency.setTargetAtTime(nt(CH[i%CH.length][k]),ac.currentTime,.3))}
+const out=(g,w)=>{g.connect(mg);if(w){const s=ac.createGain();s.gain.value=w;g.connect(s);s.connect(rvb)}};
+function kick(v,f0=130,f1=42,dur=.35){
+  if(!ac||!pl)return;
+  const n=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();
+  o.frequency.setValueAtTime(f0,n);o.frequency.exponentialRampToValueAtTime(f1,n+.12);
+  g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+dur);
+  o.connect(g);out(g);o.start(n);o.stop(n+dur+.05);
+}
+function nz(d,f1,f2,v,ty,rise){
+  if(!ac||!pl)return;
+  const n=ac.currentTime,s=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();
+  s.buffer=NB;f.type=ty;f.Q.value=ty=='bandpass'?2.2:.7;
+  f.frequency.setValueAtTime(f1,n);f.frequency.exponentialRampToValueAtTime(f2,n+d);
+  g.gain.setValueAtTime(rise?.0001:v,n);g.gain.exponentialRampToValueAtTime(rise?v:.0001,n+d);
+  s.connect(f);f.connect(g);out(g,.3);s.start(n);s.stop(n+d+.05);
+}
+function pluck(m,v,dur=.4){
+  if(!ac||!pl)return;
+  const n=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();
+  o.type='triangle';o.frequency.value=nt(m);
+  g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(v,n+.008);
+  g.gain.exponentialRampToValueAtTime(.0001,n+dur);
+  o.connect(g);out(g,.6);o.start(n);o.stop(n+dur+.05);
+}
+/* Mechanical split-flap clack: crisp dual-transient latch sound */
+function flapClack(){
+  if(!ac||!pl)return;
+  nz(.022,2200,900,.14,'bandpass');
+  setTimeout(()=>{if(ac&&pl)nz(.028,5800,2600,.12,'highpass')},16);
+}
+/* Refined cinematic collapse impact */
+function collapseImpact(){
+  shk=1.1;
+  kick(.95,150,34,.55);
+  nz(.42,1400,110,.26,'lowpass');
+  pluck(57,.16,.7);
+}
+/* Final brand musical resolution chord with controlled tail */
+function resolveChord(){
+  shk=.45;
+  kick(.65,115,44,.5);
+  [57,64,69,71,76,81].forEach((note,idx)=>{
+    setTimeout(()=>{if(ac&&pl)pluck(note,idx<2?.11:.085,2.1)},idx*28);
+  });
+}
+
+const tk=()=>nz(.03,6000,4000,.1,'highpass');
+const hit=()=>{shk=.9;kick(.82);nz(.25,1800,200,.2,'lowpass')};
+const boom=()=>{shk=.95;kick(.9);nz(.8,2500,150,.25,'lowpass')};
+const rise=()=>nz(.8,300,6000,.16,'bandpass',1);
+
+const CU=[[2.6,()=>nz(.68,260,2400,.15,'bandpass',1)],[3.3,hit],[4.4,hit],[5.3,hit]];
+for(let k=1;k<B.length-1;k++)CU.push([B[k]-.8,rise],[B[k],boom]);
+
+/* ============================================================================
+   MOMENT 1 — S1: DIMENSIONAL FILENAME TUNNEL (0s–6s)
+   ============================================================================ */
+const M=['IMG_0092_copy_edit.PNG','final_FINAL_v3.jpg','Screenshot 9.41.02 PM.png','DSC00418 (1).JPG','untitled-3.psd','IMG_0093.HEIC','new_new_photo.jpeg','scan0007.tif','WhatsApp Image 08-02.jpeg','export (12).png','IMG_0094_copy.PNG','banner-v2-REAL.png'];
+const wallEl=$('#wall');
+const wallItems=[...Array(56)].map((_,i)=>{
+  const el=ce('div','wl',M[i%12],wallEl);
+  const col=i%7,row=Math.floor(i/7);
+  /* Construct a 3D corridor around the camera axis so planes form a layered tunnel */
+  const nx=(col-3)/3,ny=(row-3.5)/3.5;
+  const ringBoost=(Math.abs(nx)<.45&&Math.abs(ny)<.45)?(nx>=0?1.35:-1.35):1;
+  const tx=nx*520*ringBoost+((i*37)%60-30);
+  const ty=ny*340*ringBoost+((i*53)%48-24);
+  const tz=-1500+((i*197)%1650);
+  return {el,tx,ty,tz};
+});
+const SL=['Thousands of files.','Same mess.','One pass.'],ST1=[3.3,4.4,5.3];
+
+function s1(u){
+  const k=Math.floor(u/.13),A=u<2.6,f=$('#fn');
+  f.style.display=A&&u>.08?'block':'none';
+  if(A){
+    f.textContent=M[k%12];
+    const side=(k%2===0?1:-1);
+    const fx=640+side*(160+(k*83)%240)-220;
+    const fy=360+(((k*131)%320)-160)-30;
+    const fz=120-((u/.13)%1)*260;
+    f.style.left=fx+'px';
+    f.style.top=fy+'px';
+    f.style.transform=`translate3d(0,0,${fz}px) rotateZ(${((k*7)%7-3)*0.6}deg)`;
+    if(k!==lk){lk=k;tk()}
+  }
+
+  /* Tunnel forward camera travel & snap to flat graphic grid at u = 3.3s */
+  const snapP=eio(pr(u,2.65,3.28));
+  const settled=u>=3.3;
+  const accel=u<2.6?u*210:(2.6*210+eo(pr(u,2.6,3.28))*950);
+
+  wallEl.style.opacity=settled?.16:(u<0.15?pr(u,0,.15):1);
+  wallItems.forEach((it,idx)=>{
+    if(settled){
+      it.el.style.transform='translate3d(0px,0px,0px)';
+      it.el.style.opacity='1';
+    }else{
+      /* Cycle z depth within [-1500, 350] while advancing, then interpolate to 0 on snap */
+      const rawZ=((it.tz+accel+1500)%1850)-1500;
+      const curX=it.tx*(1-snapP);
+      const curY=it.ty*(1-snapP);
+      const curZ=rawZ*(1-snapP);
+      const alpha=cl((curZ+1450)/450)*cl((320-curZ)/220);
+      it.el.style.transform=`translate3d(${curX.toFixed(1)}px,${curY.toFixed(1)}px,${curZ.toFixed(1)}px)`;
+      it.el.style.opacity=(alpha*(1-snapP*0.75)+snapP*0.22).toFixed(3);
+    }
+  });
+
+  const i=u<3.3?-1:u<4.4?0:u<5.3?1:2,s=$('#sl'),st=$('#slText');
+  s.style.display=i<0?'none':'flex';
+  if(i>=0){
+    st.textContent=SL[i];
+    st.className=i===2?'grad-text-gn':'grad-text';
+    s.style.fontSize=(i===0?132:176)+'px';
+    s.style.transform=`scale(${1+.24*(1-eo(pr(u,ST1[i],ST1[i]+.14)))})`;
+  }
+}
+
+/* ============================================================================
+   MOMENT 2 — S2: SPLIT-FLAP RENAME BOARD, SCALE FIELD & SPEED HERO (6s–17s)
+   ============================================================================ */
+const BG_EXT=['PNG','JPG','HEIC','TIF','PSD','WEBP','CR3','MOV'];
+const BG_ORIG=['IMG_0104_raw','DSC00812_edit','scan_batch_09','untitled_export','hero_shot_v2','campaign_asset','studio_cut_14','frame_0098_copy'];
+const bgRowsEl=$('#bgRows');
+const bgCards=[...Array(24)].map((_,i)=>{
+  const col=i%4,row=Math.floor(i/4);
+  const ext=BG_EXT[i%BG_EXT.length];
+  const orig=`${BG_ORIG[i%BG_ORIG.length]}.${ext}`;
+  const dest=`CAMPAIGN_${String(i+7).padStart(3,'0')}.${ext}`;
+  const el=ce('div','bg-row',`<span class="bg-fn">${orig}</span><span class="bg-tag">QUEUE</span>`,bgRowsEl);
+  const xBase=44+col*304+((row%2)*14-7);
+  const yBase=34+row*64;
+  const depth=(col===0||col===3)?-120:-70;
+  el.style.left=xBase+'px';
+  el.style.top=yBase+'px';
+  return {
+    el,
+    fnEl:el.querySelector('.bg-fn'),
+    tagEl:el.querySelector('.bg-tag'),
+    orig,
+    dest,
+    depth,
+    tFlip:5.32+(row*0.18)+(col*0.07)
+  };
+});
+
+const R=[
+  ['IMG_0091.PNG','CAMPAIGN_001.PNG'],
+  ['IMG_0092_copy_edit.PNG','CAMPAIGN_002.PNG'],
+  ['final_FINAL_v3.jpg','CAMPAIGN_003.JPG'],
+  ['DSC00418 (1).JPG','CAMPAIGN_004.JPG'],
+  ['Screenshot 9.41.02 PM.png','CAMPAIGN_005.PNG'],
+  ['scan0007.tif','CAMPAIGN_006.TIF']
+];
+const rows=R.map((r,i)=>{
+  const e=ce('div','row',
+    `<div class="row-card">
+      <div class="row-face row-front"><span class="fn-txt">${r[0]}</span><span class="row-tag">ORIG</span></div>
+      <div class="row-face row-back"><span class="fn-txt">${r[1]}</span><span class="row-tag">DONE</span></div>
+    </div>`,
+    $('#rows')
+  );
+  e.style.left=(i<3?80:660)+'px';
+  e.style.top=(96+(i%3)*88)+'px';
+  return {el:e,card:e.querySelector('.row-card'),front:e.querySelector('.row-front'),back:e.querySelector('.row-back')};
+});
+/* Staggered rhythm for all 6 foreground split-flap rows */
+const ST=[5.30,5.54,5.78,6.02,6.26,6.50];
+const PL=[['Batch rename','#F5F5F2',64],['Saved pipelines','#2EE58A',67],['Regex rename','#F5C451',72]];
+const pills=PL.map(x=>{const e=ce('div','pill',x[0],$('#pills'));e.style.color=e.style.borderColor=x[1];return e});
+PL.forEach((x,i)=>CU.push([B[1]+8.6+i*.5,()=>{shk=.35;pluck(x[2],.14)}]));
+/* Kinetic speed headline cues: Line 1 ("Thousands renamed.") at u=7.05s, Line 2 ("In seconds.") at u=7.48s */
+CU.push([B[1]+7.05,()=>{shk=.55;kick(.72);pluck(69,.12)}],[B[1]+7.48,()=>{hit();pluck(76,.15,.55);pluck(81,.12,.6)}]);
+
+function s2(u){
+  const a=pr(u,.25,.55),o=pr(u,4.55,5.05),b=$('#big');
+  b.style.opacity=a*(1-o);
+  b.style.transform=`scale(${(1.25-.25*eo(a))*(1-.35*o)}) translateY(${-o*130}px)`;
+  b.style.borderColor=u>3.7?'var(--gn)':'#2e3036';
+  const stem='IMG_0092_copy_edit',nw='CAMPAIGN_002';let h='';
+  if(u<1.2)h=stem;
+  else if(u<1.8)h='<b class=sel>'+stem+'</b>';
+  else if(u>=2.2){
+    const n=Math.floor(pr(u,2.2,3.6)*nw.length);
+    h=nw.slice(0,n);
+    if(n!==ln&&n>0){tk();shk=Math.max(shk,.25)}
+    ln=n;
+  }
+  $('#nm').innerHTML=h+(u>=1.8&&u<4.4?'<i class=car></i>':'')+'.PNG';
+  const ck=pr(u,3.7,4);
+  $('#chk').style.opacity=ck;
+  $('#chk').style.transform=`scale(${.5+.5*ob(ck)})`;
+  $('#cap').style.opacity=pr(u,3.9,4.2)*(1-o);
+
+  const rowsIntro=eo(pr(u,4.85,5.20));
+  $('#rows').style.opacity=rowsIntro;
+
+  /* Background batch queue field: suggests thousands of files behind the 6 foreground examples */
+  const bgIntro=eo(pr(u,4.90,5.35));
+  const bgHeadlineFade=1-0.42*eo(pr(u,6.90,7.40));
+  bgRowsEl.style.opacity=(bgIntro*bgHeadlineFade).toFixed(3);
+  const bgDrift=(u-4.9)*-5.5;
+  bgCards.forEach(card=>{
+    const fp=pr(u,card.tFlip,card.tFlip+0.32);
+    const done=fp>=0.5;
+    card.el.classList.toggle('bg-done',done);
+    card.fnEl.textContent=done?card.dest:card.orig;
+    card.tagEl.textContent=done?'DONE':'QUEUE';
+    const flipTilt=Math.sin(fp*Math.PI)*38;
+    card.el.style.transform=`translate3d(0,${bgDrift.toFixed(1)}px,${card.depth}px) scale(0.84) rotateX(${flipTilt.toFixed(1)}deg)`;
+  });
+
+  let c=0;
+  rows.forEach((r,i)=>{
+    const rawP=pr(u,ST[i],ST[i]+.36);
+    /* Convincing mechanical split-flap acceleration with crisp lock at 180deg */
+    const flapP=rawP<1?eio(rawP):1;
+    const deg=flapP*180;
+    const zLift=Math.sin(flapP*Math.PI)*22;
+    r.card.style.transform=`translateZ(${zLift.toFixed(1)}px) rotateX(${deg.toFixed(1)}deg)`;
+    /* Subtle directional shading during rotation */
+    const shade=Math.sin(flapP*Math.PI)*0.35;
+    r.front.style.filter=`brightness(${(1-shade).toFixed(2)})`;
+    r.back.style.filter=`brightness(${(0.75+0.25*flapP).toFixed(2)})`;
+    if(rawP>=0.98)c++;
+  });
+  if(c!==lc){
+    lcT=u;
+    if(u>5.2&&c>0){
+      flapClack();
+      pluck(P[Math.min(c+1,9)],.12);
+      shk=Math.max(shk,.35);
+    }
+    lc=c;
+  }
+
+  /* Restrained green completion state instead of 6/6 fraction */
+  const cn=$('#cnt');
+  const doneP=pr(u,6.52,6.84);
+  cn.style.opacity=doneP>0?1:0;
+  cn.style.transform=`scale(${(.78+.22*ob(doneP)).toFixed(3)})`;
+
+  /* Kinetic typography speed moment immediately after the 6 rows finish flipping (u = 6.86s) */
+  const h2El=$('#h2'),h2L1=$('#h2L1'),h2L2=$('#h2L2');
+  h2El.style.opacity=u>=7.02?1:0;
+  const pL1=eo(pr(u,7.05,7.32));
+  h2L1.style.opacity=u>=7.05?1:0;
+  h2L1.style.transform=`translateY(${((1-pL1)*26).toFixed(1)}px) scale(${(1+.16*(1-pL1)).toFixed(3)})`;
+  const pL2=eo(pr(u,7.48,7.74));
+  h2L2.style.opacity=u>=7.48?1:0;
+  h2L2.style.transform=`translateY(${((1-pL2)*24).toFixed(1)}px) scale(${(1+.18*(1-pL2)).toFixed(3)})`;
+
+  /* Unobtrusive supporting label: "Processed locally. No upload queue." */
+  const subP=eo(pr(u,7.92,8.30));
+  const s2Sub=$('#s2Sub');
+  s2Sub.style.opacity=subP;
+  s2Sub.style.transform=`translateY(${((1-subP)*14).toFixed(1)}px)`;
+
+  pills.forEach((e,i)=>{
+    const p=pr(u,8.6+i*.5,8.85+i*.5);
+    e.style.opacity=p>0?1:0;
+    e.style.transform=`scale(${.65+.35*ob(p)})`;
+  });
+}
+
+/* ============================================================================
+   SCENE 3 — sMeta: METADATA INSPECTION, EDITING & REMOVAL (17s–22s)
+   ============================================================================ */
+const metaRows=$$('.metaRow');
+const metaValues=$$('.metaValue');
+const metaStates=$$('.metaRow .metaState');
+const metaEyebrow=$('#metaEyebrow');
+const metaFileCard=$('#metaFileCard');
+const metaPanel=$('#metaPanel');
+const metaScan=$('#metaScan');
+let metaDateCue=false,metaGpsCue=false;
+CU.push([B[2]+3.0,hit]);
+
+function sMeta(u){
+  const intro=eo(pr(u,.08,.42));
+  metaEyebrow.style.opacity=intro;
+  metaEyebrow.style.transform=`translateY(${(1-intro)*12}px)`;
+  metaFileCard.style.opacity=eo(pr(u,.10,.48));
+  metaFileCard.style.transform=`translateY(${(1-eo(pr(u,.10,.48)))*24}px)`;
+  metaPanel.style.opacity=eo(pr(u,.20,.58));
+  metaPanel.style.transform=`translateX(${(1-eo(pr(u,.20,.58)))*22}px)`;
+
+  metaRows.forEach((row,i)=>{
+    const reveal=eo(pr(u,.35+i*.12,.62+i*.12));
+    row.style.opacity=reveal;
+    row.style.transform=`translateX(${(1-reveal)*18}px)`;
+  });
+
+  const scanP=pr(u,.55,2.75);
+  metaScan.style.top=(151+scanP*226)+'px';
+  metaScan.style.opacity=scanP>0&&scanP<1?.88:0;
+
+  const dateEdited=u>=1.55;
+  const gpsRemoved=u>=2.15;
+  metaValues.forEach((v,i)=>{
+    const row=metaRows[i];
+    if(i===0){
+      v.textContent=dateEdited?v.dataset.after:v.dataset.before;
+      metaStates[i].textContent=dateEdited?'EDITED':'ORIGINAL';
+      row.classList.toggle('changed',dateEdited);
+    }else if(i===1){
+      v.textContent=gpsRemoved?v.dataset.after:v.dataset.before;
+      metaStates[i].textContent=gpsRemoved?'STRIPPED':'PRESENT';
+      row.classList.toggle('removed',gpsRemoved);
+    }else{
+      v.textContent=v.dataset.after;
+      metaStates[i].textContent='PRESERVED';
+    }
+  });
+
+  if(u>=1.55&&!metaDateCue){tk();pluck(69,.1);metaDateCue=true}
+  if(u>=2.15&&!metaGpsCue){tk();shk=Math.max(shk,.3);pluck(76,.12);metaGpsCue=true}
+  if(u<1.55)metaDateCue=false;
+  if(u<2.15)metaGpsCue=false;
+
+  sm($('#hMeta'),u,3.0);
+  rv($('#pMeta'),pr(u,3.45,3.8));
+}
+
+/* ============================================================================
+   SECTION 4 — S3: ACCURATE PII AND API-KEY SCANNING (22s–29s)
+   ============================================================================ */
+const SCAN_ITEMS=[
+  {file:'client_notes.txt',token:'j.chen@acme.io',badge:'PII · EMAIL',type:'pii'},
+  {file:'contacts_q4.csv',token:'+1 (415) 555-0194',badge:'PII · PHONE',type:'pii'},
+  {file:'deploy_env.conf',token:'sk_live_9f8a••3c1b',badge:'API KEY',type:'key'},
+  {file:'vendor_w9.pdf',token:'SSN •••-••-4829',badge:'PII · ID',type:'pii'},
+  {file:'webhook_hdr.json',token:'AKIA••••••••7X9Q',badge:'API KEY',type:'key'}
+];
+const STAGE_W=1280,SCAN_MARGIN=80,DOC_W=208,DOC_GAP=(STAGE_W-SCAN_MARGIN*2-DOC_W*SCAN_ITEMS.length)/(SCAN_ITEMS.length-1);
+const docs=SCAN_ITEMS.map((item,i)=>{
+  const leftPos=Math.round(SCAN_MARGIN+i*(DOC_W+DOC_GAP));
+  const e=ce('div','doc'+(item.type==='key'?' key-doc':''),
+    `<div class="doc-head"><span>${item.file}</span><i class="doc-dot"></i></div>
+     <s></s><s class="w"></s>
+     <div class="doc-token">${item.token}</div>
+     <s class="m"></s><s class="w"></s><s></s>
+     <em class="${item.type==='key'?'key-badge':''}">${item.badge}</em>`,
+    $('#docs')
+  );
+  e.style.left=leftPos+'px';
+  return {el:e,type:item.type,x:leftPos+Math.round(DOC_W*0.45)};
+});
+CU.push([B[3]+4.6,hit]);
+
+function s3(u){
+  const x=50+pr(u,.85,3.25)*1180,sc=$('#scan');
+  sc.style.left=x+'px';
+  sc.style.opacity=pr(u,.45,.85)*(1-pr(u,3.25,3.55));
+  $('#scanEyebrow').style.opacity=eo(pr(u,.1,.45));
+
+  let piiCount=0,keyCount=0;
+  docs.forEach((d,i)=>{
+    const p=pr(u,.18+i*.08,.52+i*.08);
+    d.el.style.opacity=p>0?1:0;
+    d.el.style.transform=`translateY(${(1-ob(p))*68}px)`;
+    const h=x>d.x;
+    if(h&&!d.el.classList.contains('hit')){
+      tk();
+      pluck(P[Math.min(i+3,9)],.09);
+      shk=Math.max(shk,.28);
+    }
+    d.el.classList.toggle('hit',h);
+    if(h){
+      if(d.type==='pii')piiCount++;
+      else keyCount++;
+    }
+  });
+
+  const hudP=eo(pr(u,.35,.75));
+  const hud=$('#scanHud');
+  hud.style.opacity=hudP;
+  hud.style.transform=`translateY(${(1-hudP)*16}px)`;
+  $('#piiCnt').textContent=piiCount;
+  $('#keyCnt').textContent=keyCount;
+  $('#totCnt').textContent=(piiCount+keyCount)+' / 5';
+  $('#hudPii').classList.toggle('active-pii',piiCount>0);
+  $('#hudKey').classList.toggle('active-key',keyCount>0);
+
+  sm($('#h3'),u,4.6);
+  rv($('#p3'),pr(u,5.15,5.7));
+}
+
+/* ============================================================================
+   MOMENT 3 — S4: LOCAL PROCESSING 3D GLASS CUBE (29s–36s)
+   ============================================================================ */
+const glassCube=$('#glassCube');
+const cubeFaces={
+  front:$('.cf-front'),
+  back:$('.cf-back'),
+  right:$('.cf-right'),
+  left:$('.cf-left'),
+  top:$('.cf-top'),
+  bottom:$('.cf-bottom')
+};
+const cubeFiles=[...Array(9)].map((_,i)=>ce('div','cube-file','',glassCube));
+const v4=$('#v4');
+/* Blocked external cloud outside the local cube enclosure */
+const cloudG=se('g',{},v4);
+se('path',{d:'M975 170h165a42 42 0 0 0-9-83 58 58 0 0 0-110-9 48 48 0 0 0-46 92z',fill:'none',stroke:'#8A8A86','stroke-width':3.5},cloudG);
+const cloudLabel=se('text',{x:1055,y:212,'text-anchor':'middle',fill:'#8A8A86','font-family':'Inter,sans-serif','font-weight':600,'font-size':14,'letter-spacing':'0.08em'},cloudG);
+cloudLabel.textContent='EXTERNAL CLOUD';
+const sl=se('line',{x1:955,y1:195,x2:1155,y2:55,stroke:'#FF3B30','stroke-width':7,'stroke-linecap':'round','stroke-dasharray':250},v4);
+CU.push([B[4]+.9,hit],[B[4]+2.0,tk]);
+
+function s4(u){
+  /* Phase A (0.00–0.50s): Crisp flat 2D square outline facing camera.
+     Phase B (0.50–1.75s): Continuous 2D-to-3D unfolding & depth extrusion.
+     Phase C (1.75–7.00s): Settled 3D glass cube with slow continuous rotation. */
+  const flatIntro=eo(pr(u,.05,.45));
+  const unfoldP=eio(pr(u,.50,1.75));
+  const spinT=Math.max(0,u-.50);
+
+  glassCube.style.opacity=flatIntro;
+
+  /* Smoothly transition orientation from flat (0deg,0deg) into 3D rotation */
+  const rx=(-16+Math.sin(spinT*.75)*4.5)*unfoldP;
+  const ry=(-24*unfoldP)-(spinT*9.5*unfoldP);
+  const scale2D=.90+.10*flatIntro;
+  glassCube.style.transform=`scale(${scale2D.toFixed(3)}) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`;
+
+  /* Synchronized face transforms: all 6 faces stay geometrically joined at z = ±120*unfoldP */
+  const halfZ=120*unfoldP;
+  const sideScale=Math.max(0.001,unfoldP);
+  const sideAlpha=eo(pr(u,.52,1.45));
+
+  cubeFaces.front.style.transform=`translateZ(${halfZ.toFixed(2)}px)`;
+  cubeFaces.front.style.opacity='1';
+
+  cubeFaces.back.style.transform=`rotateY(180deg) translateZ(${halfZ.toFixed(2)}px)`;
+  cubeFaces.back.style.opacity=(sideAlpha*0.92).toFixed(3);
+
+  cubeFaces.right.style.transform=`rotateY(90deg) scaleX(${sideScale.toFixed(3)}) translateZ(120px)`;
+  cubeFaces.right.style.opacity=sideAlpha.toFixed(3);
+
+  cubeFaces.left.style.transform=`rotateY(-90deg) scaleX(${sideScale.toFixed(3)}) translateZ(120px)`;
+  cubeFaces.left.style.opacity=sideAlpha.toFixed(3);
+
+  cubeFaces.top.style.transform=`rotateX(90deg) scaleY(${sideScale.toFixed(3)}) translateZ(120px)`;
+  cubeFaces.top.style.opacity=sideAlpha.toFixed(3);
+
+  cubeFaces.bottom.style.transform=`rotateX(-90deg) scaleY(${sideScale.toFixed(3)}) translateZ(120px)`;
+  cubeFaces.bottom.style.opacity=sideAlpha.toFixed(3);
+
+  $('#localTag').style.opacity=pr(u,.35,.80);
+  cloudG.setAttribute('opacity',pr(u,1.2,1.8));
+  sl.setAttribute('stroke-dashoffset',250*(1-eo(pr(u,1.85,2.45))));
+
+  let litFront=false,litBack=false,litRight=false,litLeft=false,litTop=false,litBottom=false;
+  cubeFiles.forEach((f,i)=>{
+    const sx=Math.sin(1.05*u*(.65+i*.09)+i*1.7);
+    const sy=Math.cos(.85*u*(.58+i*.11)+i*2.1);
+    const sz=Math.sin(.95*u*(.62+i*.08)+i*2.9);
+    /* Files begin moving in flat 2D (pz=0) and smoothly gain 3D depth with unfoldP */
+    const px=sx*84,py=sy*84,pz=sz*84*unfoldP;
+    const edge=unfoldP>.25?Math.max(Math.abs(sx),Math.abs(sy),Math.abs(sz)):Math.max(Math.abs(sx),Math.abs(sy));
+    const hitWall=edge>.90;
+    if(sx>.90&&unfoldP>.3)litRight=true;
+    if(sx<-.90&&unfoldP>.3)litLeft=true;
+    if(sy>.90&&unfoldP>.3)litBottom=true;
+    if(sy<-.90&&unfoldP>.3)litTop=true;
+    if((sz>.90&&unfoldP>.3)||(unfoldP<=.3&&edge>.91))litFront=true;
+    if(sz<-.90&&unfoldP>.3)litBack=true;
+    f.classList.toggle('active',hitWall);
+    f.style.opacity=pr(u,.12+i*.04,.42+i*.04);
+    f.style.transform=`translate3d(${px.toFixed(1)}px,${py.toFixed(1)}px,${pz.toFixed(1)}px) rotateY(${(-ry).toFixed(1)}deg)`;
+  });
+  cubeFaces.front.classList.toggle('lit',litFront);
+  cubeFaces.back.classList.toggle('lit',litBack);
+  cubeFaces.right.classList.toggle('lit',litRight);
+  cubeFaces.left.classList.toggle('lit',litLeft);
+  cubeFaces.top.classList.toggle('lit',litTop);
+  cubeFaces.bottom.classList.toggle('lit',litBottom);
+
+  sm($('#h4'),u,.9);
+  rv($('#p4'),pr(u,1.5,2.1));
+}
+
+/* ============================================================================
+   MOMENT 4 — S5: LIVE SHARE PEER-TO-PEER 3D COMPOSITION (36s–43s)
+   ============================================================================ */
+const p2pStage=$('#p2pStage');
+const nodeHost=$('#nodeHost'),nodeGuest=$('#nodeGuest');
+const v5=$('#v5');
+/* Subtle arched peer-to-peer guide paths in SVG */
+const arcUpper=se('path',{d:'M376 215 Q 640 95 904 215',fill:'none',stroke:'#2EE58A','stroke-width':2.5,'stroke-dasharray':'6 10','stroke-linecap':'round',opacity:0},v5);
+const arcLower=se('path',{d:'M904 265 Q 640 345 376 265',fill:'none',stroke:'#F5F5F2','stroke-width':2,'stroke-dasharray':'3 12','stroke-linecap':'round',opacity:0},v5);
+/* Restrained 3D voice-waveform ring */
+const ringWrap=$('#p2pRingWrap');
+const RING_N=24;
+const ringBars=[...Array(RING_N)].map((_,i)=>ce('div','ring-bar','',ringWrap));
+/* Files traveling in clear 3D arcs from Host to Guest */
+const p2pPkts=[...Array(6)].map((_,i)=>{
+  const isRet=i>=4;
+  return ce('div','p2p-pkt'+(isRet?' ret':''),isRet?'':'→',$('#p2pPkts'));
+});
+CU.push([B[5]+1.4,hit]);
+
+function s5(u){
+  /* Enter with controlled 3D perspective & parallax, then transition cleanly back to flat 2D at scene end */
+  const enter3D=eo(pr(u,.2,1.1));
+  const exitFlat=1-eio(pr(u,5.6,6.75));
+  const depthAmt=enter3D*exitFlat;
+  const tiltX=15*depthAmt;
+  const tiltY=(-7+Math.sin(u*.8)*2.5)*depthAmt;
+  p2pStage.style.transform=`rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg)`;
+
+  const hIn=eo(pr(u,.2,.75)),gIn=eo(pr(u,.38,.92));
+  nodeHost.style.opacity=hIn;
+  nodeGuest.style.opacity=gIn;
+  nodeHost.style.transform=`translate3d(0,${((1-hIn)*30).toFixed(1)}px,${(28*depthAmt).toFixed(1)}px) rotateY(${(8*depthAmt).toFixed(2)}deg)`;
+  nodeGuest.style.transform=`translate3d(0,${((1-gIn)*30).toFixed(1)}px,${(-18*depthAmt).toFixed(1)}px) rotateY(${(-8*depthAmt).toFixed(2)}deg)`;
+
+  const k=pr(u,.95,1.55);
+  arcUpper.setAttribute('opacity',(k*0.55).toFixed(2));
+  arcLower.setAttribute('opacity',(k*0.28).toFixed(2));
+  $('#p2pCaption').style.opacity=k;
+
+  /* Synchronized 3D voice-waveform ring */
+  ringWrap.style.opacity=k;
+  ringWrap.style.transform=`translateZ(${(18*depthAmt).toFixed(1)}px) rotateX(${(54*depthAmt).toFixed(1)}deg) rotateZ(${(u*18).toFixed(1)}deg)`;
+  ringBars.forEach((b,i)=>{
+    const ang=(i/RING_N)*360;
+    const wave=0.45+1.35*Math.abs(Math.sin(u*6.5+i*.55)*Math.cos(u*2.4-i*.3));
+    b.style.transform=`rotate(${ang}deg) translateY(-68px) scaleY(${(wave*k).toFixed(2)})`;
+  });
+
+  /* Clear, elegant 3D parabolic file transfer arcs */
+  p2pPkts.forEach((el,i)=>{
+    if(i<4){
+      /* Forward file packets: Host (x=380) -> Guest (x=896) over upper 3D arc */
+      const p=(u*.48+i*.25)%1;
+      const x=380+p*516;
+      const arc=Math.sin(p*Math.PI);
+      const y=218-arc*74;
+      const z=arc*56*depthAmt;
+      el.style.opacity=(k*Math.sin(p*Math.PI)).toFixed(3);
+      el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,${z.toFixed(1)}px)`;
+    }else{
+      /* Peer acknowledgement packets along lower arc */
+      const p=(u*.48+(i-4)*.5)%1;
+      const x=896-p*516;
+      const arc=Math.sin(p*Math.PI);
+      const y=262+arc*46;
+      const z=-arc*28*depthAmt;
+      el.style.opacity=(k*0.75*Math.sin(p*Math.PI)).toFixed(3);
+      el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,${z.toFixed(1)}px)`;
+    }
+  });
+
+  sm($('#h5'),u,1.4);
+  rv($('#p5'),pr(u,2.0,2.6));
+}
+
+/* ============================================================================
+   SCENE 7 — sEcho: EDITORIAL ECHOEX ECOSYSTEM SHOWCASE (43s–61s, u = 0..18s)
+   ============================================================================ */
+const vEcho=$('#vEcho');
+const echoNodesEl=$('#echoNodes');
+const ECHO_NODES=[
+  {id:'PEER_01',x0:263,y0:241,x:180,y:142},
+  {id:'PEER_02',x0:1017,y0:241,x:1100,y:142},
+  {id:'NODE_03',x0:263,y0:241,x:440,y:106},
+  {id:'NODE_04',x0:1017,y0:241,x:840,y:106},
+  {id:'NODE_05',x0:263,y0:241,x:150,y:340},
+  {id:'NODE_06',x0:1017,y0:241,x:1130,y:340},
+  {id:'NODE_07',x0:640,y0:241,x:420,y:390},
+  {id:'NODE_08',x0:640,y0:241,x:860,y:390}
+];
+const ECHO_LINKS=[
+  [0,2],[2,3],[3,1],[0,4],[1,5],[4,6],[6,7],[7,5],[2,6],[3,7],[0,1],[2,5]
+];
+const echoLines=ECHO_LINKS.map(()=>se('line',{stroke:'#2EE58A','stroke-width':1.5,'stroke-dasharray':'4 8',opacity:0},vEcho));
+/* Direct active connection line used during Communication, Compute, and Marketplace */
+const echoDirectLine=se('line',{stroke:'#2EE58A','stroke-width':2.2,'stroke-dasharray':'6 8',opacity:0},vEcho);
+const echoPackets=[...Array(6)].map((_,i)=>se('circle',{r:4,fill:i%2?'#2EE58A':'#F5F5F2',opacity:0},vEcho));
+const echoNodeEls=ECHO_NODES.map(n=>{
+  const el=ce('div','echo-node',`<i class="en-dot"></i><span class="en-lbl">${n.id}</span>`,echoNodesEl);
+  return {el,lbl:el.querySelector('.en-lbl'),data:n};
+});
+
+/* Moment 2: Communication waveform & traveling files */
+const commWaveBars=[...Array(20)].map(()=>ce('div','comm-wave-bar','',$('#commWaveWrap')));
+const COMM_FILES=['Reel_4K_ProRes.mov','Shoot_Batch.tar.zst','Assembly_v9.step'];
+const commFileEls=COMM_FILES.map(f=>ce('div','comm-file-tok',f,$('#commFilesWrap')));
+
+/* Moment 3: Sovereign Compute request & inference streams */
+const compStreamWrap=$('#compStreamNodes');
+const compReqDots=[...Array(3)].map(()=>ce('div','comp-req-dot','',compStreamWrap));
+const compInfPulses=[...Array(4)].map(()=>ce('div','comp-pulse','',compStreamWrap));
+
+/* Moment 6: Quest Route Waypoints for directional tracker */
+const QUEST_PTS=[[130,330],[190,330],[250,245],[420,245],[485,140],[590,140]];
+const QUEST_SEGS=[];
+let questTotalLen=0;
+for(let i=0;i<QUEST_PTS.length-1;i++){
+  const dx=QUEST_PTS[i+1][0]-QUEST_PTS[i][0],dy=QUEST_PTS[i+1][1]-QUEST_PTS[i][1];
+  const len=Math.hypot(dx,dy),ang=Math.atan2(dy,dx)*180/Math.PI;
+  QUEST_SEGS.push({x0:QUEST_PTS[i][0],y0:QUEST_PTS[i][1],dx,dy,len,ang,start:questTotalLen});
+  questTotalLen+=len;
+}
+function pointOnQuestRoute(frac){
+  const d=cl(frac)*questTotalLen;
+  for(let i=0;i<QUEST_SEGS.length;i++){
+    const s=QUEST_SEGS[i];
+    if(d<=s.start+s.len||i===QUEST_SEGS.length-1){
+      const p=cl((d-s.start)/s.len);
+      return {x:s.x0+s.dx*p,y:s.y0+s.dy*p,ang:s.ang};
+    }
+  }
+  return {x:590,y:140,ang:0};
+}
+
+/* Synchronized Echoex audio cues across the 18s showcase (B[6] = 43s) */
+CU.push(
+  [B[6]+0.30,()=>{pluck(64,.11,.5);pluck(71,.10,.55)}],
+  [B[6]+1.85,()=>{tk();pluck(67,.11,.45)}],
+  [B[6]+4.45,()=>{tk();pluck(69,.12,.5);setTimeout(()=>{if(ac&&pl)pluck(76,.09,.4)},180)}],
+  [B[6]+7.55,()=>{tk();pluck(72,.12,.45)}],
+  [B[6]+10.45,()=>{tk();pluck(74,.11,.4);setTimeout(()=>{if(ac&&pl)pluck(79,.10,.42)},150)}],
+  [B[6]+13.05,()=>{tk();pluck(69,.11,.45)}],
+  [B[6]+14.35,()=>{shk=.25;tk();pluck(76,.12,.5);pluck(81,.10,.55)}],
+  [B[6]+16.65,()=>{shk=.32;pluck(79,.12,.6);pluck(84,.10,.65)}]
+);
+
+function sEcho(u){
+  const expandP=eio(pr(u,0.05,1.15));
+  const focusPairP=eio(pr(u,1.35,1.85))*(1-eio(pr(u,4.15,4.50)));
+  const computeMode=u>=4.40&&u<7.50;
+  const marketMode=u>=7.50&&u<10.40;
+  const pnumbriMode=u>=10.40&&u<13.00;
+  const questMode=u>=13.00&&u<16.60;
+  const questPrivate=u>=14.30&&u<16.60;
+  const synthMode=u>=16.60;
+
+  const synthLift=eio(pr(u,16.55,17.05));
+  const SYNTH_POS=[
+    {x:210,y:230},{x:1070,y:230},{x:450,y:180},{x:830,y:180},
+    {x:320,y:340},{x:960,y:340},{x:530,y:350},{x:750,y:350}
+  ];
+
+  const curPos=ECHO_NODES.map((n,i)=>{
+    let bx=n.x0+(n.x-n.x0)*expandP+Math.sin(u*1.3+i)*4*expandP;
+    let by=n.y0+(n.y-n.y0)*expandP+Math.cos(u*1.1+i*1.3)*4*expandP;
+    if(synthLift>0){
+      bx=bx*(1-synthLift)+SYNTH_POS[i].x*synthLift;
+      by=by*(1-synthLift)+SYNTH_POS[i].y*synthLift;
+    }
+    return {x:bx,y:by};
+  });
+
+  echoNodeEls.forEach((item,i)=>{
+    const p=curPos[i];
+    const nodeIn=i<2?1:eo(pr(u,0.12+i*0.06,0.68+i*0.06));
+    let op=nodeIn;
+    if(u>=1.80&&u<4.40)op=i<2?0.95:0.18;
+    else if(computeMode)op=(i===1||i===2)?0.98:0.16;
+    else if(marketMode)op=(i===0||i===1)?0.95:0.18;
+    else if(pnumbriMode)op=0.28;
+    else if(questMode)op=questPrivate?0.06:0.16;
+    else if(synthMode)op=0.92;
+
+    item.el.style.opacity=op.toFixed(3);
+    item.el.style.transform=`translate3d(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px,0)`;
+    item.el.classList.toggle('en-compute',computeMode&&i===2);
+    item.el.classList.toggle('en-active',
+      (u<1.80&&i<2)||
+      (u>=1.80&&u<4.40&&i<2)||
+      (computeMode&&i===1)||
+      (marketMode&&(i===0||i===1))||
+      (pnumbriMode&&i%2===0)||
+      (synthMode&&i<5)
+    );
+  });
+
+  echoLines.forEach((lnEl,idx)=>{
+    const [a,b]=ECHO_LINKS[idx];
+    lnEl.setAttribute('x1',curPos[a].x.toFixed(1));
+    lnEl.setAttribute('y1',curPos[a].y.toFixed(1));
+    lnEl.setAttribute('x2',curPos[b].x.toFixed(1));
+    lnEl.setAttribute('y2',curPos[b].y.toFixed(1));
+    lnEl.setAttribute('stroke',computeMode?'#F5C451':(pnumbriMode?'#F5F5F2':'#2EE58A'));
+    let lineOp=eo(pr(u,0.22+idx*0.04,0.85+idx*0.04))*0.42;
+    if(u>=1.80&&u<13.00)lineOp=pnumbriMode?0.24:0.12;
+    else if(questMode)lineOp=questPrivate?0.04:0.10;
+    else if(synthMode)lineOp=0.38;
+    lnEl.setAttribute('opacity',lineOp.toFixed(3));
+  });
+
+  /* Direct peer connection highlight line for Moments 2, 3, and 4 */
+  if(u>=1.40&&u<10.40){
+    echoDirectLine.setAttribute('opacity','0.75');
+    if(u<4.40){
+      echoDirectLine.setAttribute('x1','290');echoDirectLine.setAttribute('y1','205');
+      echoDirectLine.setAttribute('x2','990');echoDirectLine.setAttribute('y2','205');
+      echoDirectLine.setAttribute('stroke','#2EE58A');
+    }else if(computeMode){
+      echoDirectLine.setAttribute('x1','380');echoDirectLine.setAttribute('y1','225');
+      echoDirectLine.setAttribute('x2','900');echoDirectLine.setAttribute('y2','225');
+      echoDirectLine.setAttribute('stroke','#F5C451');
+    }else{
+      echoDirectLine.setAttribute('x1','530');echoDirectLine.setAttribute('y1','195');
+      echoDirectLine.setAttribute('x2','950');echoDirectLine.setAttribute('y2','195');
+      echoDirectLine.setAttribute('stroke','#2EE58A');
+    }
+  }else{
+    echoDirectLine.setAttribute('opacity','0');
+  }
+
+  echoPackets.forEach((pk,i)=>{
+    const link=ECHO_LINKS[(i*2)%ECHO_LINKS.length];
+    const pa=curPos[link[0]],pb=curPos[link[1]];
+    const prog=(u*0.55+i*0.17)%1;
+    const px=pa.x+(pb.x-pa.x)*prog;
+    const py=pa.y+(pb.y-pa.y)*prog;
+    pk.setAttribute('cx',px.toFixed(1));
+    pk.setAttribute('cy',py.toFixed(1));
+    pk.setAttribute('fill',computeMode?'#F5C451':'#2EE58A');
+    const pkVis=questMode?(questPrivate?0.05:0.2):(u>=1.8&&u<10.4?0.25:0.85);
+    pk.setAttribute('opacity',(expandP*Math.sin(prog*Math.PI)*pkVis).toFixed(3));
+  });
+
+  /* Persistent Editorial Header from u = 1.5s onward */
+  const topIn=eo(pr(u,1.50,1.90));
+  const echoTop=$('#echoTopBar');
+  echoTop.style.opacity=topIn.toFixed(3);
+  echoTop.style.transform=`translateY(${((1-topIn)*-12).toFixed(1)}px)`;
+  const phaseEl=$('#echoTopPhase');
+  if(u<4.40)phaseEl.textContent='DIRECT PEER COMMUNICATION';
+  else if(computeMode)phaseEl.textContent='SOVEREIGN COMPUTE';
+  else if(marketMode)phaseEl.textContent='SOVEREIGN MARKETPLACE';
+  else if(pnumbriMode)phaseEl.textContent='PNUMBRI · MESH NEWS';
+  else if(questMode)phaseEl.textContent=questPrivate?'QUEST · PRIVATE ROUTE':'QUEST · PUBLIC BRIEF';
+  else phaseEl.textContent='EPHEMERAL BY DESIGN';
+
+  /* MOMENT 1 (0.0–1.8s): Introduce Echoex */
+  const bAIn=eo(pr(u,0.12,0.52)),bAOut=1-eio(pr(u,1.42,1.80));
+  const beatA=$('#echoBeatA');
+  beatA.style.opacity=(bAIn*bAOut).toFixed(3);
+  beatA.style.transform=`scale(${(0.94+0.06*bAIn-0.04*(1-bAOut)).toFixed(3)})`;
+
+  /* MOMENT 2 (1.8–4.4s): Communication & File Exchange */
+  const bBIn=eo(pr(u,1.78,2.15)),bBOut=1-eio(pr(u,4.08,4.42));
+  const beatB=$('#echoBeatB');
+  beatB.style.opacity=(bBIn*bBOut).toFixed(3);
+  beatB.style.transform=`translateY(${((1-bBIn)*18-(1-bBOut)*14).toFixed(1)}px)`;
+  if(bBIn*bBOut>0){
+    $('#chatFrag1').style.opacity=eo(pr(u,2.00,2.35));
+    $('#chatFrag2').style.opacity=eo(pr(u,2.35,2.70));
+    commWaveBars.forEach((b,idx)=>{
+      const sc=0.25+0.75*Math.abs(Math.sin(u*8+idx*0.45)*Math.cos(u*3.2-idx*0.2));
+      b.style.transform=`scaleY(${sc.toFixed(2)})`;
+    });
+    commFileEls.forEach((el,idx)=>{
+      const fp=(Math.max(0,u-1.95)*0.52+idx*0.33)%1;
+      const fx=220+fp*620;
+      const fy=Math.sin(fp*Math.PI)*-14;
+      el.style.transform=`translate3d(${fx.toFixed(1)}px,${fy.toFixed(1)}px,0)`;
+      el.style.opacity=Math.sin(fp*Math.PI).toFixed(3);
+    });
+  }
+
+  /* MOMENT 3 (4.4–7.5s): Sovereign Compute */
+  const bCIn=eo(pr(u,4.38,4.78)),bCOut=1-eio(pr(u,7.15,7.50));
+  const beatC=$('#echoBeatC');
+  beatC.style.opacity=(bCIn*bCOut).toFixed(3);
+  beatC.style.transform=`translateY(${((1-bCIn)*18-(1-bCOut)*14).toFixed(1)}px)`;
+  if(bCIn*bCOut>0){
+    const reqActive=pr(u,4.65,5.35);
+    const infActive=pr(u,5.15,7.35);
+    $('#compReqLbl').style.opacity=eo(pr(u,4.55,4.90));
+    $('#compInfLbl').style.opacity=eo(pr(u,5.10,5.45));
+    compReqDots.forEach((d,idx)=>{
+      const p=((u-4.55)*0.85+idx*0.33)%1;
+      const x=820-p*520;
+      d.style.transform=`translate3d(${x.toFixed(1)}px,88px,0)`;
+      d.style.opacity=(reqActive>0?Math.sin(p*Math.PI)*0.85:0).toFixed(3);
+    });
+    compInfPulses.forEach((el,idx)=>{
+      const p=(Math.max(0,u-5.10)*0.75+idx*0.25)%1;
+      const x=300+p*520;
+      el.style.transform=`translate3d(${x.toFixed(1)}px,128px,0)`;
+      el.style.opacity=(infActive>0?Math.sin(p*Math.PI):0).toFixed(3);
+    });
+  }
+
+  /* MOMENT 4 (7.5–10.4s): Sovereign Marketplace */
+  const bDIn=eo(pr(u,7.46,7.86)),bDOut=1-eio(pr(u,10.05,10.40));
+  const beatD=$('#echoBeatD');
+  beatD.style.opacity=(bDIn*bDOut).toFixed(3);
+  beatD.style.transform=`translateY(${((1-bDIn)*18-(1-bDOut)*14).toFixed(1)}px)`;
+  if(bDIn*bDOut>0){
+    const d1=eo(pr(u,7.55,7.95)),d2=eo(pr(u,7.75,8.15)),d3=eo(pr(u,7.92,8.32));
+    $('#mktDoc1').style.opacity=d1;
+    $('#mktDoc1').style.transform=`translateY(${((1-d1)*16).toFixed(1)}px)`;
+    $('#mktDoc2').style.opacity=d2*0.82;
+    $('#mktDoc2').style.transform=`translateY(${((1-d2)*16).toFixed(1)}px)`;
+    $('#mktDoc3').style.opacity=d3*0.82;
+    $('#mktDoc3').style.transform=`translateY(${((1-d3)*16).toFixed(1)}px)`;
+  }
+
+  /* MOMENT 5 (10.4–13.0s): Pnumbri Editorial News Stream */
+  const bEIn=eo(pr(u,10.36,10.76)),bEOut=1-eio(pr(u,12.68,13.02));
+  const beatE=$('#echoBeatE');
+  beatE.style.opacity=(bEIn*bEOut).toFixed(3);
+  beatE.style.transform=`translateY(${((1-bEIn)*18-(1-bEOut)*14).toFixed(1)}px)`;
+  if(bEIn*bEOut>0){
+    const p2=eo(pr(u,10.75,11.15)),p3=eo(pr(u,10.95,11.35));
+    $('#pnumItem2').style.opacity=p2;
+    $('#pnumItem2').style.transform=`translateX(${((1-p2)*18).toFixed(1)}px)`;
+    $('#pnumItem3').style.opacity=p3;
+    $('#pnumItem3').style.transform=`translateX(${((1-p3)*18).toFixed(1)}px)`;
+  }
+
+  /* MOMENT 6 (13.0–16.6s): Quest Public Work & Private Route Tracking */
+  const bFIn=eo(pr(u,12.96,13.36)),bFOut=1-eio(pr(u,16.28,16.62));
+  const beatF=$('#echoBeatF');
+  beatF.style.opacity=(bFIn*bFOut).toFixed(3);
+  beatF.style.transform=`translateY(${((1-bFIn)*18-(1-bFOut)*14).toFixed(1)}px)`;
+  if(bFIn*bFOut>0){
+    const privP=eio(pr(u,14.25,14.65));
+    const routeDrawP=eio(pr(u,14.45,15.55));
+    const trackerMoveP=eio(pr(u,14.60,16.25));
+
+    /* Stage 1 -> Stage 2 Privacy Transition */
+    $('#questPublicObservers').setAttribute('opacity',(1-privP*0.88).toFixed(2));
+    $('#questPairLink').setAttribute('opacity',(privP*0.85).toFixed(2));
+    $('#questRouteBg').setAttribute('opacity',privP.toFixed(2));
+    $('#questMarkerA').setAttribute('opacity',eo(pr(u,13.25,13.65)).toFixed(2));
+    $('#questMarkerB').setAttribute('opacity',eo(pr(u,13.50,13.90)).toFixed(2));
+    $('#questRouteLine').setAttribute('stroke-dashoffset',(640*(1-routeDrawP)).toFixed(1));
+
+    const mover=$('#questMover');
+    mover.setAttribute('opacity',(privP>0.2?1:0).toFixed(2));
+    const pt=pointOnQuestRoute(trackerMoveP);
+    mover.setAttribute('transform',`translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)}) rotate(${pt.ang.toFixed(1)})`);
+
+    /* Update typographic annotations between Public Posting and Private Route Tracking */
+    const isPriv=u>=14.30;
+    $('#questKicker').textContent=isPriv?'QUEST  ·  STAGE 02':'QUEST  ·  STAGE 01';
+    $('#questBriefTag').textContent=isPriv?'ASSIGNED PEER EXECUTION':'PUBLIC WORK POSTING';
+    $('#questBriefStatus').textContent=isPriv?'PAIRED PEER LINK · PUBLIC MESH DIMMED':'OPEN ON MESH · VISIBLE TO PEERS';
+    $('#questStageIndicator').style.borderLeftColor=isPriv?'var(--gn)':'var(--wh)';
+    $('#questPrivacyLine1').textContent=isPriv?'PRIVATE ROUTE TRACKING':'PUBLIC WORK POSTING';
+    $('#questPrivacyLine1').style.color=isPriv?'var(--gn)':'var(--wh)';
+    $('#questPrivacyLine2').textContent=isPriv?'SHARED ONLY WITH THE ASSIGNED PEER  ·  NOT STORED':'NO ACCOUNT REQUIRED';
+    $('#questMapMode').textContent=isPriv?'PAIRED EXECUTION · A → B ROUTE':'SECTOR GRID · PUBLIC DISCOVERY';
+    $('#questMapScope').textContent=isPriv?'VISIBILITY: REQUESTER + ASSIGNED PEER ONLY':'MESH VISIBILITY: PUBLIC BRIEF';
+    $('#questMapScope').style.color=isPriv?'var(--gn)':'var(--wh)';
+  }
+
+  /* MOMENT 7 (16.6–18.0s): Open Mesh Ecosystem Synthesis */
+  const bGIn=eo(pr(u,16.58,16.98));
+  const beatG=$('#echoBeatG');
+  beatG.style.opacity=bGIn.toFixed(3);
+  beatG.style.transform=`translateY(${((1-bGIn)*16).toFixed(1)}px)`;
+}
+
+/* ============================================================================
+   SECTION 5 — S6: EIGHT-SECOND FIVE-BEAT FINALE (61s–69s, u = 0..8s)
+   ============================================================================ */
+const SUPERCUT_BEATS=[
+  {
+    eyebrow:'01 / BULK INGEST',
+    step:'MOMENT 1 OF 6',
+    main:'Thousands of files.',
+    artifact:'IMG_0092_copy_edit.PNG',
+    badge:'QUEUED',
+    badgeBg:'#2a2d36',
+    badgeFg:'#F5F5F2',
+    foot:'DIMENSIONAL BATCH QUEUE · READY',
+    accent:'#F5F5F2',
+    whiteDoc:false
+  },
+  {
+    eyebrow:'02 / SPLIT-FLAP BATCH RENAME',
+    step:'MOMENT 2 OF 6',
+    main:'Thousands renamed.',
+    artifact:'IMG_0092_copy_edit.PNG → CAMPAIGN_002.PNG',
+    badge:'IN SECONDS',
+    badgeBg:'#2EE58A',
+    badgeFg:'#070707',
+    foot:'PROCESSED LOCALLY · NO UPLOAD QUEUE',
+    accent:'#2EE58A',
+    whiteDoc:false
+  },
+  {
+    eyebrow:'03 / METADATA CONTROL',
+    step:'MOMENT 3 OF 6',
+    main:'GPS · [REMOVED]',
+    artifact:'EXIF Date: EDITED · GPS Coordinates: STRIPPED',
+    badge:'CLEANED',
+    badgeBg:'#F5C451',
+    badgeFg:'#070707',
+    foot:'EXIF · XMP · IPTC UNDER CONTROL',
+    accent:'#F5C451',
+    whiteDoc:false
+  },
+  {
+    eyebrow:'04 / PII & API-KEY SCAN',
+    step:'MOMENT 4 OF 6',
+    main:'Find what shouldn\'t leave.',
+    artifact:'deploy_env.conf · sk_live_9f8a••3c1b',
+    badge:'API KEY',
+    badgeBg:'#FF3B30',
+    badgeFg:'#FFFFFF',
+    foot:'5 / 5 SENSITIVE TOKENS FLAGGED LOCALLY',
+    accent:'#FF8A1F',
+    whiteDoc:true
+  },
+  {
+    eyebrow:'05 / LOCAL ENCLOSURE',
+    step:'MOMENT 5 OF 6',
+    main:'100% On-Device.',
+    artifact:'LOCAL GLASS ENCLOSURE · EXTERNAL CLOUD BLOCKED',
+    badge:'PRIVATE',
+    badgeBg:'#2EE58A',
+    badgeFg:'#070707',
+    foot:'FILES NEVER LEAVE YOUR MACHINE',
+    accent:'#2EE58A',
+    whiteDoc:false
+  },
+  {
+    eyebrow:'06 / ECHOEX MESH ECOSYSTEM',
+    step:'MOMENT 6 OF 6',
+    main:'Echoex Mesh',
+    artifact:'LIVE SHARE · COMPUTE · MARKETPLACE · PNUMBRI · QUEST',
+    badge:'NO LOGIN',
+    badgeBg:'#2EE58A',
+    badgeFg:'#070707',
+    foot:'EPHEMERAL COLLECTIVE MESH · ZERO USER DATA SAVED',
+    accent:'#2EE58A',
+    whiteDoc:false
+  }
+];
+const scCards=SUPERCUT_BEATS.map(b=>{
+  return ce('div','sc-card',
+    `<div class="sc-top"><span class="sc-eyebrow" style="color:${b.accent}">${b.eyebrow}</span><span class="sc-step">${b.step}</span></div>
+     <div class="sc-main grad-text">${b.main}</div>
+     <div class="sc-Artifact${b.whiteDoc?' white-doc':''}">
+       <span>${b.artifact}</span>
+       <span class="sc-badge" style="background:${b.badgeBg};color:${b.badgeFg}">${b.badge}</span>
+     </div>
+     <div class="sc-foot"><span>${b.foot}</span><span style="color:${b.accent}">●</span></div>`,
+    $('#finSuper')
+  );
+});
+
+const COLLAPSE_FRAGS=[
+  {txt:'IMG_0092.PNG',x:-410,y:-175,doc:false},
+  {txt:'CAMPAIGN_002.PNG',x:410,y:-175,doc:false},
+  {txt:'GPS · [REMOVED]',x:-450,y:0,doc:false},
+  {txt:'API KEY · sk_live_9f8a••3c1b',x:450,y:0,doc:true},
+  {txt:'100% LOCAL CUBE',x:-390,y:175,doc:false},
+  {txt:'ECHOEX · EPHEMERAL MESH',x:390,y:175,doc:false}
+];
+const colFrags=COLLAPSE_FRAGS.map(f=>ce('div','col-frag'+(f.doc?' frag-doc':''),f.txt,$('#collapseStage')));
+const focalRing=$('#focalRing');
+const cbStage=$('#cbStage'),cbNum=$('#cbNum'),cbWordBox=$('#cbWordBox'),cbFlipper=$('#cbFlipper'),cbSub=$('#cbSub');
+const brandStage=$('#brandStage'),tbEl=$('#tb'),tbBars=$$('#tb i');
+
+/* Finale audio cues synchronized to B[7] (61s–69s) */
+/* Beat A: Supercut ticks + continuous riser into Beat B convergence (u = 0.05s .. 2.10s) */
+CU.push([B[7]+0.05,()=>nz(2.05,280,5200,.15,'bandpass',1)]);
+[0,1,2,3,4,5].forEach(idx=>{
+  CU.push([B[7]+idx*0.29,()=>{tk();pluck(P[idx+2],.095,.24)}]);
+});
+/* Beat B -> Beat C: Convergence lands at focal point and expands into "Thousands of files." at u = 2.10s */
+CU.push([B[7]+2.10,collapseImpact]);
+/* Beat C: "Thousands of files." holds cleanly, then flips to "Thousands renamed." at u = 2.95s */
+CU.push([B[7]+2.95,()=>{flapClack();shk=.48;pluck(76,.14,.55);pluck(81,.12,.65)}]);
+/* Beat D: Abstract Color-Bar Transition (u = 3.92s .. 4.65s) */
+CU.push([B[7]+3.92,()=>pluck(69,.095,.38)],[B[7]+4.10,()=>pluck(72,.095,.38)],[B[7]+4.28,()=>pluck(76,.105,.38)]);
+/* Beat E: Brand Resolution (u = 4.55s .. 8.00s) */
+CU.push([B[7]+4.65,()=>pluck(69,.12,.6)],[B[7]+5.15,()=>pluck(76,.12,.6)],[B[7]+5.75,resolveChord]);
+
+function s6(u){
+  /* BEAT A — COHERENT SUPERCUT (u = 0.00s to 1.74s, 6 moments @ 0.29s each) */
+  const inSuper=u<1.74;
+  $('#finSuper').style.display=inSuper?'block':'none';
+  if(inSuper){
+    const idx=Math.min(5,Math.floor(u/0.29));
+    const localU=(u-idx*0.29)/0.29;
+    scCards.forEach((c,i)=>{
+      if(i===idx){
+        c.style.opacity='1';
+        const sc=0.94+0.06*eo(cl(localU*2.6));
+        c.style.transform=`scale(${sc.toFixed(3)})`;
+      }else{
+        c.style.opacity='0';
+      }
+    });
+  }
+
+  /* BEAT B — MEANINGFUL COLLAPSE (u = 1.70s to 2.48s)
+     All 6 product motifs converge to the exact center (640,360) by u = 2.10s and expand into "Thousands of files." */
+  const inCollapse=u>=1.70&&u<2.50;
+  $('#collapseStage').style.display=inCollapse?'block':'none';
+  if(inCollapse){
+    const cp=eio(pr(u,1.72,2.10));
+    colFrags.forEach((el,i)=>{
+      const f=COLLAPSE_FRAGS[i];
+      const cx=f.x*(1-cp);
+      const cy=f.y*(1-cp);
+      const sc=1-0.76*cp;
+      const fadeIn=pr(u,1.70,1.82);
+      const fadeOut=1-pr(u,2.04,2.14);
+      el.style.opacity=(fadeIn*fadeOut).toFixed(3);
+      el.style.transform=`translate(calc(-50% + ${cx.toFixed(1)}px),calc(-50% + ${cy.toFixed(1)}px)) scale(${sc.toFixed(2)})`;
+    });
+    const ringP=pr(u,2.08,2.46);
+    focalRing.style.opacity=ringP>0&&ringP<1?(1-eo(ringP))*0.85:0;
+    focalRing.style.transform=`scale(${(0.22+2.6*eo(ringP)).toFixed(2)})`;
+  }
+
+  /* BEAT C — CALLBACK & SPEED PAYOFF (u = 2.06s to 4.04s)
+     The focal point at (640,360) expands directly into "Thousands of files." at u = 2.10s,
+     holds cleanly so the viewer registers the phrase, then flips "of files." -> "renamed." at u = 2.95s. */
+  const cbIn=eo(pr(u,2.06,2.34));
+  const cbOut=1-eio(pr(u,3.80,4.04));
+  cbStage.style.opacity=(cbIn*cbOut).toFixed(3);
+
+  const emergeScale=0.24+0.76*eo(pr(u,2.06,2.34));
+  const landPunch=u>=2.10?0.08*(1-eo(pr(u,2.10,2.32))):0;
+  const exitScale=1-0.08*pr(u,3.80,4.04);
+  cbStage.style.transform=`scale(${((emergeScale+landPunch)*exitScale).toFixed(3)})`;
+
+  const flipP=eio(pr(u,2.95,3.28));
+  cbFlipper.style.transform=`rotateX(${(flipP*180).toFixed(1)}deg)`;
+
+  /* Editorial microcopy beneath the main headline after the flip settles */
+  const subIn=eo(pr(u,3.26,3.52));
+  cbSub.style.opacity=(subIn*cbOut).toFixed(3);
+  cbSub.style.transform=`translateY(${((1-subIn)*10).toFixed(1)}px)`;
+
+  /* BEAT D — ABSTRACT COLOR-BAR TRANSITION (u = 3.88s to 8.00s) */
+  const barVisible=u>=3.88;
+  tbEl.style.opacity=barVisible?1:0;
+  if(barVisible){
+    const settleP=eio(pr(u,4.42,4.85));
+    const liftY=(1-settleP)*-82;
+    tbEl.style.transform=`translateY(${liftY.toFixed(1)}px)`;
+    tbBars.forEach((b,i)=>{
+      const bp=eo(pr(u,3.92+i*.16,4.36+i*.16));
+      const tilt=(1-settleP)*18;
+      b.style.opacity=bp;
+      b.style.transform=`scaleX(${bp.toFixed(3)}) rotateX(${tilt.toFixed(1)}deg)`;
+    });
+  }
+
+  /* BEAT E — BRAND RESOLUTION (u = 4.72s to 8.00s) */
+  const brandIn=pr(u,4.72,5.05);
+  brandStage.style.opacity=brandIn;
+  rv($('#mk'),pr(u,4.75,5.15));
+  $$('.tg span').forEach((e,i)=>{
+    e.style.transform=`translateY(${(1-eo(pr(u,4.85+i*.45,5.38+i*.45)))*118}%)`;
+  });
+  const c=$('#cta'),p=pr(u,5.85,6.18);
+  c.style.opacity=p>0?1:0;
+  c.style.transform=`scale(${.78+.22*ob(p)})`;
+  rv($('#sub6'),pr(u,6.25,6.72));
+}
+
+const FN=[s1,s2,sMeta,s3,s4,s5,sEcho,s6];
+const bar=[...Array(6)].map(()=>ce('i','','',$('#tx')));
+const BC=['#F5F5F2','#2EE58A','#FF3B30','#FF8A1F','#F5C451','#F5F5F2'];
+const ZF={1:.22,3:.45,5:.32,6:.18,7:.28};
+
+/* Master Engine & Timeline Renderer */
+function render(){
+  let i=B.findIndex((b,k)=>t>=b&&t<B[k+1]);
+  if(i<0)i=FN.length-1;
+  SC.forEach((e,k)=>e.style.opacity=k==i?1:0);
+  if(i!==ls){ls=i;score(i)}
+  const u=t-B[i];
+  FN[i](u);
+
+  /* Scene boundary transitions */
+  let kk=0;
+  for(let k=1;k<B.length-1;k++)if(Math.abs(t-B[k])<.4)kk=k;
+  const d=kk?t-B[kk]:0;
+  $('#fl').style.opacity=[1,3,5,7].includes(kk)?cl(1-Math.abs(d)/.16)*0.75:0;
+  const tx=$('#tx');
+  tx.className=kk==4?'v':'';
+  bar.forEach((e,j)=>{
+    let pos=-101;
+    if(kk==2||kk==4){
+      const p=(d+.4)/.8;
+      pos=-100+100*cl((p-.03*j)/.35)+100*cl((p-.5-.03*j)/.35);
+    }
+    e.style.background=kk==4?BC[j]:BC[0];
+    e.style.transform=kk==4?`translateY(${pos}%)`:`translateX(${pos}%)`;
+  });
+  const Z=ZF[kk]||0;
+  const zf=kk?(d<0?1+Z*eo(pr(d,-.3,0)):1+Z*.5*(1-eo(pr(d,0,.45)))):1;
+  shk*=.88;
+  const dr=1+.04*pr(u,0,B[i+1]-B[i]);
+  $('#cam').style.transform=`translate(${(Math.random()-.5)*12*shk}px,${(Math.random()-.5)*12*shk}px) scale(${dr*zf})`;
+
+  /* Continuous musical bed through Echoex, collapse & callback, with controlled fade tail at 67s–69s */
+  if(ac&&padGain){
+    const tailFade=t>B[7]+6.0?1-pr(t,B[7]+6.0,T-0.1):1;
+    padGain.gain.setTargetAtTime(tailFade,ac.currentTime,0.08);
+  }
+
+  const sp=Math.floor(t*4);
+  const pulseActive=i>=1&&t<B[7]+5.5;
+  if(pl&&sp!==l4&&pulseActive){
+    if(sp%2==0)kick(.46);
+    else nz(.04,7000,5000,.045,'highpass');
+    pluck(P[AR[sp%8]],sp%2?.045:.085);
+  }
+  l4=sp;
+
+  if(pl)CU.forEach(c=>{if(pt<c[0]&&t>=c[0])c[1]()});
+  pt=t;
+
+  $('#sk').value=Math.round(t*100);
+  const m=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+  $('#tm').textContent=m(t)+' / '+m(T);
+}
+
+function resetTrackers(){
+  ln=-1;lc=-1;lk=-1;lp=-1;metaDateCue=false;metaGpsCue=false;
+  $$('.doc').forEach(d=>d.classList.remove('hit'));
+}
+
+function ui(){
+  $('#pp').textContent=pl?'Pause':(t>=T-.01?'Replay':'Play');
+  $('#go').style.display=started?'none':'';
+  if(mg)mg.gain.setTargetAtTime(pl&&!muted?.6:0,ac.currentTime,.15);
+}
+
+function play(){
+  audio();
+  if(ac.state==='suspended')ac.resume();
+  if(t>=T-.01){t=0;pt=0;resetTrackers()}
+  started=pl=true;
+  ui();
+}
+
+$('#go').onclick=play;
+$('#pp').onclick=()=>pl?(pl=false,ui()):play();
+$('#sk').oninput=e=>{
+  const newT=cl(e.target.value/100,0,T-.001);
+  if(newT<t)resetTrackers();
+  t=newT;
+  pt=t;
+  render();
+};
+$('#mu').onclick=()=>{muted=!muted;$('#mu').textContent=muted?'Unmute':'Mute';ui()};
+
+function fit(){
+  const s=Math.min(innerWidth*.98/1280,(innerHeight-90)/720);
+  $('#st').style.transform=`scale(${s})`;
+  $('#box').style.width=1280*s+'px';
+  $('#box').style.height=720*s+'px';
+}
+addEventListener('resize',fit);
+fit();
+
+function loop(n){
+  if(pl){
+    t+=Math.min(.1,(n-L)/1000);
+    if(t>=T){t=T-.001;pl=false;ui()}
+  }
+  L=n;
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script></body></html>

@@ -600,6 +600,26 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
               </button>
             )}
 
+            <a
+              href="/demo"
+              data-testid="watch-pitch-link"
+              title="Watch 28-Second Narrated Pitch (/demo)"
+              aria-label="Watch 28s Pitch"
+              className="inline-flex h-7 items-center gap-1.5 rounded-md border border-white/10 bg-[#141418]/75 px-2.5 text-[11px] font-medium text-[#E5E7EB] transition-colors hover:border-white/20 hover:bg-[#1C1C20]/80 hover:text-[#F4F4F5] whitespace-nowrap shrink-0"
+            >
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+                className="shrink-0 opacity-85"
+              >
+                <path d="M8 5.14v14l11-7-11-7z" />
+              </svg>
+              <span>Watch 28s Pitch</span>
+            </a>
+
             <button
               type="button"
               onClick={() => onSetViewportMode('fullscreen')}
