@@ -1,0 +1,6 @@
+{
+  "name": "Ignimetheus",
+  "description": "Reduced-order SI thermo-fluids digital twin for spacecraft fire safety with offline WebGPU telemetry auditing",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
