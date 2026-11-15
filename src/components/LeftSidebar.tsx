@@ -7,6 +7,9 @@ import {
   Clock01Icon,
 } from '@hugeicons/core-free-icons';
 import {
+  isSaffireCycleRecord,
+} from '../engine/nasaComparison';
+import {
   MATERIALS,
   MISSION_PRESETS,
   type MaterialId,
@@ -33,6 +36,7 @@ interface LeftSidebarProps {
   onNewSession: () => void;
   onSelectPreset: (preset: MissionPreset) => void;
   onLoadExperiment: (exp: NasaPsiExperiment) => void;
+  onRunNasaExperiment: (exp: NasaPsiExperiment) => void;
   onRestoreDiagnostic: (msg: SafetyChatMessage) => void;
   onClearDiagnostics: () => void;
 }
@@ -49,15 +53,15 @@ function getExperimentGeometryBadge(exp: NasaPsiExperiment): string {
 function getDiagnosticTitle(msg: SafetyChatMessage): string {
   if (msg.kind === 'diagnostic') {
     const expId = msg.snapshot?.experiment.id;
-    return expId ? `Protocol Diagnostic · ${expId}` : 'Protocol Diagnostic';
+    return expId ? `Telemetry Diagnostic · ${expId}` : 'Telemetry Diagnostic';
   }
   const source = msg.promptForRegenerate ?? msg.content;
-  const firstLine = source.split('\n')[0]?.trim() ?? 'Safety Officer Query';
+  const firstLine = source.split('\n')[0]?.trim() ?? 'Telemetry Query';
   return firstLine.length > 34 ? `${firstLine.slice(0, 34)}...` : firstLine;
 }
 
 function getHazardDot(hazard?: string): string {
-  if (hazard === 'CRITICAL') return 'bg-rose-300';
+  if (hazard === 'CRITICAL' || hazard === 'HIGH_RATE') return 'bg-rose-300';
   if (hazard === 'ELEVATED') return 'bg-amber-300';
   if (hazard === 'EXTINGUISHED') return 'bg-cyan-300';
   return 'bg-zinc-400';
@@ -87,10 +91,15 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   onNewSession,
   onSelectPreset,
   onLoadExperiment,
+  onRunNasaExperiment,
   onRestoreDiagnostic,
   onClearDiagnostics,
 }) => {
   const isOnline = useOnlineStatus();
+  const primarySaffireExp = useMemo(
+    () => experiments.find((e) => e.id === 'SAFFIRE-I-01') ?? null,
+    [experiments],
+  );
 
   // 3 reference accordions per workspace spec (Diagnostic Sessions moved to top-left header Clock popover)
   const [scenariosOpen, setScenariosOpen] = useState(true);
@@ -323,7 +332,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
             <div className="accordion-content" data-open={scenariosOpen}>
               <div className="accordion-inner">
-                <div className="mt-1 flex flex-col gap-0.5 pb-1">
+                <div data-tour="scenario-list" className="mt-1 flex flex-col gap-0.5 pb-1">
                   {MISSION_PRESETS.map((preset) => {
                     const isActive = activePresetId === preset.id;
                     const velFmt = formatVelocity(preset.params.flowVelocityMs, unitSystem);
@@ -371,6 +380,28 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
               </div>
             </div>
           </section>
+
+          {/* Run NASA's Experiment Entry Point (above Dataset Library) */}
+          {primarySaffireExp && (
+            <div className="px-2.5 py-2">
+              <button
+                type="button"
+                data-testid="run-nasa-experiment-btn"
+                data-tour="run-nasa-experiment"
+                aria-label="Run NASA's experiment"
+                onClick={() => {
+                  onRunNasaExperiment(primarySaffireExp);
+                  if (isMobile) onCloseMobile();
+                }}
+                className="flex w-full flex-col items-start gap-0.5 rounded-lg border border-[#3F3F46] bg-[#18181C] px-2.5 py-2 text-left text-xs font-medium text-[#F4F4F5] transition-colors hover:border-[#52525B] hover:bg-[#27272A] cursor-pointer"
+              >
+                <span>Run NASA&apos;s experiment</span>
+                <span className="font-mono text-[10px] font-normal text-[#A1A1AA]">
+                  {primarySaffireExp.id} · 0g PMMA sheet
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* 2. NASA PSI Dataset Library (Expanded by default) */}
           <section aria-label="NASA PSI Dataset Library" className="py-1.5 px-2">
@@ -424,34 +455,55 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                               {runs.map((exp) => {
                                 const isMatched = matched.experiment.id === exp.id;
                                 const geomLabel = getExperimentGeometryBadge(exp);
+                                const isReplayEligible = isSaffireCycleRecord(exp);
                                 return (
-                                  <button
+                                  <div
                                     key={exp.id}
-                                    type="button"
-                                    data-testid={`psi-run-${exp.id}`}
-                                    onClick={() => {
-                                      onLoadExperiment(exp);
-                                      if (isMobile) onCloseMobile();
-                                    }}
-                                    title={`${exp.title} — ${exp.o2Percent}% O2, ${(exp.flowVelocityMs * 100).toFixed(1)} cm/s`}
-                                    className={`flex w-full items-center justify-between gap-1.5 rounded-md px-2 py-1 text-left transition-colors cursor-pointer ${
+                                    className={`flex w-full items-center justify-between gap-1 rounded-md px-1.5 py-0.5 transition-colors ${
                                       isMatched
                                         ? 'bg-[#18181C] text-[#F4F4F5]'
                                         : 'text-[#71717A] hover:bg-[#111114] hover:text-[#E4E4E7]'
                                     }`}
                                   >
-                                    <span className="flex items-center gap-1.5 min-w-0">
-                                      <span
-                                        className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                                          isMatched ? 'bg-cyan-300' : 'bg-[#3F3F46]'
-                                        }`}
-                                      />
-                                      <span className="font-mono text-[11px] truncate">{exp.id}</span>
-                                    </span>
-                                    <span className="font-mono text-[9.5px] text-[#71717A] shrink-0">
-                                      {geomLabel}
-                                    </span>
-                                  </button>
+                                    <button
+                                      type="button"
+                                      data-testid={`psi-run-${exp.id}`}
+                                      onClick={() => {
+                                        onLoadExperiment(exp);
+                                        if (isMobile) onCloseMobile();
+                                      }}
+                                      title={`${exp.title} — ${exp.o2Percent}% O2, ${(exp.flowVelocityMs * 100).toFixed(1)} cm/s`}
+                                      className="flex flex-1 min-w-0 items-center justify-between gap-1.5 py-0.5 text-left cursor-pointer"
+                                    >
+                                      <span className="flex items-center gap-1.5 min-w-0">
+                                        <span
+                                          className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                            isMatched ? 'bg-cyan-300' : 'bg-[#3F3F46]'
+                                          }`}
+                                        />
+                                        <span className="font-mono text-[11px] truncate">{exp.id}</span>
+                                      </span>
+                                      {!isReplayEligible && (
+                                        <span className="font-mono text-[9.5px] text-[#71717A] shrink-0">
+                                          {geomLabel}
+                                        </span>
+                                      )}
+                                    </button>
+                                    {isReplayEligible && (
+                                      <button
+                                        type="button"
+                                        data-testid={`replay-nasa-${exp.id}`}
+                                        aria-label={`Replay ${exp.id}`}
+                                        onClick={() => {
+                                          onRunNasaExperiment(exp);
+                                          if (isMobile) onCloseMobile();
+                                        }}
+                                        className="rounded border border-[#27272A] bg-[#111114] px-1.5 py-0.5 font-mono text-[9.5px] text-[#D4D4D8] hover:border-[#3F3F46] hover:bg-[#27272A] hover:text-[#F4F4F5] shrink-0 cursor-pointer"
+                                      >
+                                        Replay
+                                      </button>
+                                    )}
+                                  </div>
                                 );
                               })}
                             </div>

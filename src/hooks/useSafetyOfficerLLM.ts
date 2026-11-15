@@ -13,21 +13,17 @@ import {
   type WebGpuRuntimePhase,
 } from '../engine/inferenceBackend';
 import {
-  buildGroundedChatAnswer,
   buildSafetyReasoningSteps,
-  buildTieredSystemPrompt,
   buildVerifiedSafetySnapshot,
-  buildWebLlmPrompt,
-  checkOutOfScopeQuery,
-  evaluateAuditedReasoningResponse,
+  classifyIntent,
+  createEmptyDebugCounters,
+  executeSafetyAdvisorTurn,
   extractThoughtAndAnswer,
-  NUMERIC_GUARDRAIL_INSTRUCTION,
-  parseThinkSteps,
-  quickRuleMatch,
-  REASONING_VALIDATION_FAILED_NOTE,
-  type AuditedReasoningEvaluation,
+  type AdvisorDebugCounters,
+  type SafetyIntent,
   type SafetyReasoningStep,
   type SafetyRecommendation,
+  type SafetyResponseBadge,
 } from '../engine/safetyAdvisor';
 import type {
   MatchedExperimentResult,
@@ -103,10 +99,7 @@ export type SafetyOfficerStatus =
   | 'Loading Local Weights'
   | 'Offline WebGPU Ready';
 
-export type SafetyMessageSource =
-  | 'Deterministic'
-  | 'Local model (numbers audited)'
-  | 'Not modeled';
+export type SafetyMessageSource = SafetyResponseBadge;
 
 export interface MessageTelemetrySnapshot {
   experiment: NasaPsiExperiment;
@@ -123,6 +116,7 @@ export interface SafetyChatMessage {
   role: 'user' | 'assistant';
   content: string;
   source: SafetyMessageSource;
+  intent?: SafetyIntent;
   kind?: 'diagnostic' | 'chat';
   promptForRegenerate?: string;
   snapshot?: MessageTelemetrySnapshot;
@@ -131,6 +125,7 @@ export interface SafetyChatMessage {
   reasoningPath?: string;
   reasoningFailedValidation?: boolean;
   reasoningFailureNote?: string;
+  exampleQuestions?: string[];
   createdAtMs?: number;
   threadSnapshot?: SafetyChatMessage[];
 }
@@ -149,6 +144,7 @@ interface UseSafetyOfficerLLMArgs {
   matched: MatchedExperimentResult;
   unitSystem: UnitSystem;
   markers?: CadMarker[];
+  manualExtinguish?: boolean;
 }
 
 export function useSafetyOfficerLLM({
@@ -157,6 +153,7 @@ export function useSafetyOfficerLLM({
   matched,
   unitSystem,
   markers = [],
+  manualExtinguish = false,
 }: UseSafetyOfficerLLMArgs) {
   const [selectedBackend, setSelectedBackend] = useState<InferenceBackendId>('verified');
   const [webGpuPhase, setWebGpuPhase] = useState<WebGpuRuntimePhase>('idle');
@@ -177,8 +174,13 @@ export function useSafetyOfficerLLM({
     getCachedHardwareProfile(),
   );
   const [activeModelId, setActiveModelId] = useState<string | null>(() => activeSingletonModelId);
-  const [auditPassCount, setAuditPassCount] = useState<number>(0);
-  const [auditFailCount, setAuditFailCount] = useState<number>(0);
+  const [debugCounters, setDebugCounters] = useState<AdvisorDebugCounters>(() =>
+    createEmptyDebugCounters(),
+  );
+  const debugCountersRef = useRef<AdvisorDebugCounters>(createEmptyDebugCounters());
+  const auditPassCount = debugCounters.auditPass;
+  const auditFailCount =
+    debugCounters.auditReject + debugCounters.authorityReject + debugCounters.truncationFallback;
   const [messages, setMessages] = useState<SafetyChatMessage[]>([]);
   const [sessionArchive, setSessionArchive] = useState<SafetyChatMessage[]>([]);
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState<string>('Synced to telemetry');
@@ -221,8 +223,8 @@ export function useSafetyOfficerLLM({
   }, []);
 
   const verifiedSnapshot: SafetyRecommendation = useMemo(
-    () => buildVerifiedSafetySnapshot(params, telemetry, matched, unitSystem),
-    [params, telemetry, matched, unitSystem],
+    () => buildVerifiedSafetySnapshot(params, telemetry, matched, unitSystem, manualExtinguish),
+    [params, telemetry, matched, unitSystem, manualExtinguish],
   );
 
   const buildSnapshotBadge = useCallback((): MessageTelemetrySnapshot => {
@@ -609,16 +611,10 @@ export function useSafetyOfficerLLM({
     ]);
   }, []);
 
-  /**
-   * Executes a non-streaming atomic WebGPU completion wrapped in an 18-second hard timeout,
-   * applies Qwen3 sampling settings when Qwen3 is active, isolates `<think>` blocks into
-   * `reasoningPath`, trims truncated final answers, resets the KV cache, and runs the strict
-   * post-LLM numeric audit exclusively on the final answer.
-   */
-  const runAuditedWebGpuCompletion = useCallback(
+  const invokeRawWebGpuCompletion = useCallback(
     async (
       chatMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
-    ): Promise<AuditedReasoningEvaluation | null> => {
+    ): Promise<{ content: string; finishReason?: string | null } | null> => {
       const engine = engineInstance;
       if (!engine) return null;
       const profile = hardwareProfile ?? (await getHardwareProfile());
@@ -651,26 +647,10 @@ export function useSafetyOfficerLLM({
         const choice = reply.choices?.[0];
         const rawText = choice?.message?.content?.trim() || '';
         if (!rawText) return null;
-
-        const evaluation = evaluateAuditedReasoningResponse(
-          rawText,
-          choice?.finish_reason,
-          params,
-          telemetry,
-          matched,
-          unitSystem,
-          markers,
-        );
-
-        if (evaluation.auditedText) {
-          setAuditPassCount((c) => c + 1);
-          return evaluation;
-        }
-
-        if (evaluation.auditResult || evaluation.reasoningFailedValidation) {
-          setAuditFailCount((c) => c + 1);
-        }
-        return evaluation;
+        return {
+          content: rawText,
+          finishReason: choice?.finish_reason ?? null,
+        };
       } finally {
         if (engineInstance && typeof engineInstance.resetChat === 'function') {
           try {
@@ -682,24 +662,16 @@ export function useSafetyOfficerLLM({
         }
       }
     },
-    [hardwareProfile, markers, matched, params, telemetry, unitSystem],
+    [hardwareProfile, preferredModelFamily],
   );
 
   const analyzeSuppressionProtocol = useCallback(async () => {
     if (isGenerating) return;
     const token = ++cancelTokenRef.current;
     const diagId = `diag-${Date.now()}`;
-    const userPrompt = 'Run Protocol Diagnostic for current chamber telemetry.';
+    const userPrompt = 'Run Telemetry Diagnostic for current chamber telemetry.';
     const snapMeta = buildSnapshotBadge();
-    const useWebGpu = Boolean(
-      engineInstance &&
-        status === 'Offline WebGPU Ready' &&
-        (hardwareProfile?.tier !== 'constrained' ||
-          (manualWebGpuOverrideRef.current && hardwareProfile?.hasWebGpu)),
-    );
-    const backendLabel = useWebGpu
-      ? `${formatModelFamilyLabel(activeModelId ?? preferredModelFamily)} Local WebGPU`
-      : 'Deterministic Telemetry Engine';
+    const backendLabel = 'Deterministic Telemetry Engine';
     const steps = buildSafetyReasoningSteps(
       params,
       telemetry,
@@ -708,6 +680,7 @@ export function useSafetyOfficerLLM({
       'diagnostic',
       markers,
       backendLabel,
+      manualExtinguish,
     );
     const startedAt = performance.now();
 
@@ -716,18 +689,16 @@ export function useSafetyOfficerLLM({
     setActiveThinking({
       id: `${diagId}-think`,
       kind: 'diagnostic',
-      activeLabel: useWebGpu
-        ? 'Thinking · Local WebGPU'
-        : 'Analyzing chamber telemetry & PSI flight bounds',
+      activeLabel: 'Analyzing chamber telemetry & reference bounds',
       steps,
-      stepIntervalMs: useWebGpu ? 750 : 280,
+      stepIntervalMs: 280,
     });
 
     const userMsg: SafetyChatMessage = {
       id: `${diagId}-u`,
       role: 'user',
       content: userPrompt,
-      source: useWebGpu ? 'Local model (numbers audited)' : 'Deterministic',
+      source: 'Deterministic',
       createdAtMs: Date.now(),
     };
     const nextWithUser = [...messagesRef.current, userMsg];
@@ -735,53 +706,9 @@ export function useSafetyOfficerLLM({
     setMessages(nextWithUser);
 
     try {
-      let failedEvaluation: AuditedReasoningEvaluation | null = null;
-      if (useWebGpu && engineInstance) {
-        const prompt = buildWebLlmPrompt(params, telemetry, matched, unitSystem);
-        const evaluation = await runAuditedWebGpuCompletion([
-          {
-            role: 'system',
-            content: `You are the Ignimetheus Spacecraft Fire Safety Officer. Provide crisp, technical fire-suppression orders citing the exact NASA PSI run ID without emojis. ${NUMERIC_GUARDRAIL_INSTRUCTION}`,
-          },
-          { role: 'user', content: prompt },
-        ]);
-        if (cancelTokenRef.current !== token) return;
-        if (evaluation?.auditedText) {
-          const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
-          const thinkNodes = parseThinkSteps(evaluation.reasoningPath);
-          const mergedSteps = thinkNodes.length > 0 ? [...steps, ...thinkNodes] : steps;
-          appendAssistantMessage({
-            id: `${diagId}-a`,
-            role: 'assistant',
-            content: evaluation.auditedText,
-            source: 'Local model (numbers audited)',
-            kind: 'diagnostic',
-            promptForRegenerate: userPrompt,
-            snapshot: snapMeta,
-            thoughtSteps: mergedSteps,
-            thoughtDurationS: durationS,
-            ...(evaluation.reasoningPath ? { reasoningPath: evaluation.reasoningPath } : {}),
-            reasoningFailedValidation: false,
-          });
-          setLastUpdatedLabel('Local model (numbers audited)');
-          return;
-        }
-        failedEvaluation = evaluation;
-      }
-
-      if (!(useWebGpu && engineInstance)) {
-        const completed = await awaitReasoningTrace(token, 1180);
-        if (!completed || cancelTokenRef.current !== token) return;
-      }
+      const completed = await awaitReasoningTrace(token, 1180);
+      if (!completed || cancelTokenRef.current !== token) return;
       const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
-      const failedThinkNodes = parseThinkSteps(failedEvaluation?.reasoningPath);
-      const mergedFailedSteps =
-        failedThinkNodes.length > 0 ? [...steps, ...failedThinkNodes] : steps;
-      const didFailAudit = Boolean(
-        failedEvaluation &&
-          (failedEvaluation.reasoningFailedValidation ||
-            failedEvaluation.auditResult?.passed === false),
-      );
       appendAssistantMessage({
         id: `${diagId}-a`,
         role: 'assistant',
@@ -790,16 +717,8 @@ export function useSafetyOfficerLLM({
         kind: 'diagnostic',
         promptForRegenerate: userPrompt,
         snapshot: snapMeta,
-        thoughtSteps: mergedFailedSteps,
+        thoughtSteps: steps,
         thoughtDurationS: durationS,
-        ...(failedEvaluation?.reasoningPath ? { reasoningPath: failedEvaluation.reasoningPath } : {}),
-        ...(didFailAudit
-          ? {
-              reasoningFailedValidation: true,
-              reasoningFailureNote:
-                failedEvaluation?.reasoningFailureNote ?? REASONING_VALIDATION_FAILED_NOTE,
-            }
-          : {}),
       });
       setLastUpdatedLabel('Deterministic');
     } catch {
@@ -824,19 +743,14 @@ export function useSafetyOfficerLLM({
       }
     }
   }, [
-    activeModelId,
     appendAssistantMessage,
     awaitReasoningTrace,
     buildSnapshotBadge,
-    hardwareProfile?.hasWebGpu,
-    hardwareProfile?.tier,
     isGenerating,
+    manualExtinguish,
     markers,
     matched,
     params,
-    preferredModelFamily,
-    runAuditedWebGpuCompletion,
-    status,
     telemetry,
     unitSystem,
     verifiedSnapshot.rawText,
@@ -850,236 +764,127 @@ export function useSafetyOfficerLLM({
       const token = ++cancelTokenRef.current;
       const msgId = `chat-${Date.now()}`;
       const snapMeta = buildSnapshotBadge();
-
-      // Requirement 3: Pre-LLM Out-of-Scope Router (`Not modeled`)
-      const outOfScopeAnswer = checkOutOfScopeQuery(
-        question,
-        params,
-        telemetry,
-        matched,
-        unitSystem,
+      const intent = classifyIntent(question);
+      const profile = hardwareProfile ?? (await getHardwareProfile());
+      const canUseWebLlm = Boolean(
+        engineInstance &&
+          status === 'Offline WebGPU Ready' &&
+          (profile.tier !== 'constrained' ||
+            (manualWebGpuOverrideRef.current && profile.hasWebGpu)),
       );
-
-      // Requirement 5: Fast-Path Deterministic Bypass (`Deterministic`)
-      const fastPathAnswer =
-        outOfScopeAnswer === null
-          ? quickRuleMatch(question, params, telemetry, matched, unitSystem, markers)
-          : null;
-
-      const useWebGpu =
-        outOfScopeAnswer === null &&
-        fastPathAnswer === null &&
-        Boolean(
-          engineInstance &&
-            status === 'Offline WebGPU Ready' &&
-            (hardwareProfile?.tier !== 'constrained' ||
-              (manualWebGpuOverrideRef.current && hardwareProfile?.hasWebGpu)),
+      const modelFamilyLabel = formatModelFamilyLabel(activeModelId ?? preferredModelFamily);
+      const isPreIgnitionQuench =
+        telemetry.chamberState === 'STANDBY' &&
+        /\b(?:quench|quenched|extinguished|not\s+burning|isn't\s+burning|is\s+not\s+burning)\b/i.test(
+          question,
         );
+      const willInvokeLlm = intent === 'EXPLAIN' && canUseWebLlm && !isPreIgnitionQuench;
 
-      const backendLabel =
-        outOfScopeAnswer !== null
-          ? '1D Scope Guardrail'
-          : useWebGpu
-            ? `${formatModelFamilyLabel(activeModelId ?? preferredModelFamily)} Local WebGPU`
-            : 'Deterministic Telemetry Engine';
-
-      const steps = buildSafetyReasoningSteps(
-        params,
-        telemetry,
-        matched,
-        unitSystem,
-        'chat',
-        markers,
-        backendLabel,
-      );
+      const userSource: SafetyMessageSource =
+        intent === 'OUT_OF_SCOPE'
+          ? 'Not modeled'
+          : intent === 'SMALLTALK' || intent === 'ABOUT' || intent === 'GLOSSARY'
+            ? 'Info'
+            : willInvokeLlm
+              ? 'Local model (figures checked)'
+              : 'Deterministic';
 
       const userMsg: SafetyChatMessage = {
         id: `${msgId}-u`,
         role: 'user',
         content: question,
-        source:
-          outOfScopeAnswer !== null
-            ? 'Not modeled'
-            : useWebGpu
-              ? 'Local model (numbers audited)'
-              : 'Deterministic',
+        source: userSource,
+        intent,
         createdAtMs: Date.now(),
       };
       const nextWithUser = [...messagesRef.current, userMsg];
       messagesRef.current = nextWithUser;
       setMessages(nextWithUser);
 
-      if (outOfScopeAnswer !== null) {
-        appendAssistantMessage({
-          id: `${msgId}-a`,
-          role: 'assistant',
-          content: outOfScopeAnswer,
-          source: 'Not modeled',
-          kind: 'chat',
-          promptForRegenerate: question,
-          snapshot: snapMeta,
-          thoughtSteps: steps,
-          thoughtDurationS: 0.1,
-        });
-        setLastUpdatedLabel('Not modeled');
-        return;
-      }
-
-      if (fastPathAnswer !== null) {
-        appendAssistantMessage({
-          id: `${msgId}-a`,
-          role: 'assistant',
-          content: fastPathAnswer,
-          source: 'Deterministic',
-          kind: 'chat',
-          promptForRegenerate: question,
-          snapshot: snapMeta,
-          thoughtSteps: steps,
-          thoughtDurationS: 0.1,
-        });
-        setLastUpdatedLabel('Deterministic');
-        return;
-      }
-
       const startedAt = performance.now();
-      setIsGenerating(true);
-      setRegeneratingMessageId(null);
-      setActiveThinking({
-        id: `${msgId}-think`,
-        kind: 'chat',
-        activeLabel: useWebGpu ? 'Thinking · Local WebGPU' : 'Analyzing chamber telemetry',
-        steps,
-        stepIntervalMs: useWebGpu ? 750 : 280,
-      });
+      if (willInvokeLlm) {
+        const previewSteps = buildSafetyReasoningSteps(
+          params,
+          telemetry,
+          matched,
+          unitSystem,
+          'chat',
+          markers,
+          `${modelFamilyLabel} Local WebGPU`,
+          manualExtinguish,
+        );
+        setIsGenerating(true);
+        setRegeneratingMessageId(null);
+        setActiveThinking({
+          id: `${msgId}-think`,
+          kind: 'chat',
+          activeLabel: 'Thinking · Local WebGPU',
+          steps: previewSteps,
+          stepIntervalMs: 750,
+        });
+      }
 
       try {
-        let failedEvaluation: AuditedReasoningEvaluation | null = null;
-        if (useWebGpu && engineInstance) {
-          const profile = hardwareProfile ?? (await getHardwareProfile());
-          const liveSystemPrompt = buildTieredSystemPrompt(
-            params,
-            telemetry,
-            matched,
-            unitSystem,
-            profile.systemPromptBudget,
-          );
-          const recentHistory = messages.slice(-4).map((m) => ({
+        const result = await executeSafetyAdvisorTurn({
+          question,
+          params,
+          telemetry,
+          matched,
+          unitSystem,
+          markers,
+          manualExtinguish,
+          canUseWebLlm,
+          modelFamilyLabel,
+          systemPromptBudget: profile.systemPromptBudget,
+          recentHistory: messagesRef.current.slice(-5, -1).map((m) => ({
             role: m.role,
             content: m.content,
-          }));
-          const evaluation = await runAuditedWebGpuCompletion([
-            { role: 'system', content: liveSystemPrompt },
-            ...recentHistory,
-            { role: 'user', content: question },
-          ]);
-          if (cancelTokenRef.current !== token) return;
-          if (evaluation?.auditedText) {
-            const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
-            const thinkNodes = parseThinkSteps(evaluation.reasoningPath);
-            const mergedSteps = thinkNodes.length > 0 ? [...steps, ...thinkNodes] : steps;
-            appendAssistantMessage({
-              id: `${msgId}-a`,
-              role: 'assistant',
-              content: evaluation.auditedText,
-              source: 'Local model (numbers audited)',
-              kind: 'chat',
-              promptForRegenerate: question,
-              snapshot: snapMeta,
-              thoughtSteps: mergedSteps,
-              thoughtDurationS: durationS,
-              ...(evaluation.reasoningPath ? { reasoningPath: evaluation.reasoningPath } : {}),
-              reasoningFailedValidation: false,
-            });
-            setLastUpdatedLabel('Local model (numbers audited)');
-            return;
-          }
-          failedEvaluation = evaluation;
-        }
+          })),
+          llmInvoker: willInvokeLlm ? invokeRawWebGpuCompletion : undefined,
+          counters: debugCountersRef.current,
+        });
 
-        if (!(useWebGpu && engineInstance)) {
-          const completed = await awaitReasoningTrace(token, 1180);
-          if (!completed || cancelTokenRef.current !== token) return;
-        }
-        const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
-        const fallbackText = buildGroundedChatAnswer(
-          question,
-          params,
-          telemetry,
-          matched,
-          unitSystem,
-          markers,
-        );
-        const failedThinkNodes = parseThinkSteps(failedEvaluation?.reasoningPath);
-        const mergedFailedSteps =
-          failedThinkNodes.length > 0 ? [...steps, ...failedThinkNodes] : steps;
-        const didFailAudit = Boolean(
-          failedEvaluation &&
-            (failedEvaluation.reasoningFailedValidation ||
-              failedEvaluation.auditResult?.passed === false),
-        );
-        appendAssistantMessage({
-          id: `${msgId}-a`,
-          role: 'assistant',
-          content: fallbackText,
-          source: 'Deterministic',
-          kind: 'chat',
-          promptForRegenerate: question,
-          snapshot: snapMeta,
-          thoughtSteps: mergedFailedSteps,
-          thoughtDurationS: durationS,
-          ...(failedEvaluation?.reasoningPath
-            ? { reasoningPath: failedEvaluation.reasoningPath }
-            : {}),
-          ...(didFailAudit
-            ? {
-                reasoningFailedValidation: true,
-                reasoningFailureNote:
-                  failedEvaluation?.reasoningFailureNote ?? REASONING_VALIDATION_FAILED_NOTE,
-              }
-            : {}),
-        });
-        setLastUpdatedLabel('Deterministic');
-      } catch {
         if (cancelTokenRef.current !== token) return;
+        debugCountersRef.current = result.counters;
+        setDebugCounters(result.counters);
+
         const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
-        const fallbackText = buildGroundedChatAnswer(
-          question,
-          params,
-          telemetry,
-          matched,
-          unitSystem,
-          markers,
-        );
         appendAssistantMessage({
           id: `${msgId}-a`,
           role: 'assistant',
-          content: fallbackText,
-          source: 'Deterministic',
+          content: result.content,
+          source: result.source,
+          intent: result.intent,
           kind: 'chat',
           promptForRegenerate: question,
-          snapshot: snapMeta,
-          thoughtSteps: steps,
-          thoughtDurationS: durationS,
+          ...(result.includeTelemetryCard ? { snapshot: snapMeta } : {}),
+          thoughtSteps: result.reasoningSteps,
+          ...(result.reasoningSteps.length > 0 ? { thoughtDurationS: durationS } : {}),
+          ...(result.reasoningPath ? { reasoningPath: result.reasoningPath } : {}),
+          reasoningFailedValidation: result.reasoningFailedValidation,
+          ...(result.reasoningFailureNote ? { reasoningFailureNote: result.reasoningFailureNote } : {}),
+          ...(result.exampleQuestions ? { exampleQuestions: result.exampleQuestions } : {}),
         });
-        setLastUpdatedLabel('Deterministic');
+        setLastUpdatedLabel(result.source);
       } finally {
-        if (cancelTokenRef.current === token) {
+        if (willInvokeLlm && cancelTokenRef.current === token) {
           setActiveThinking(null);
           setIsGenerating(false);
         }
       }
     },
     [
+      activeModelId,
       appendAssistantMessage,
-      awaitReasoningTrace,
       buildSnapshotBadge,
       hardwareProfile,
+      invokeRawWebGpuCompletion,
       isGenerating,
+      manualExtinguish,
       markers,
       matched,
-      messages,
       params,
-      runAuditedWebGpuCompletion,
+      preferredModelFamily,
       status,
       telemetry,
       unitSystem,
@@ -1089,174 +894,190 @@ export function useSafetyOfficerLLM({
   const regenerateMessage = useCallback(
     async (assistantMsgId: string) => {
       if (isGenerating) return;
-      const target = messages.find((m) => m.id === assistantMsgId && m.role === 'assistant');
+      const target = messagesRef.current.find((m) => m.id === assistantMsgId && m.role === 'assistant');
       if (!target) return;
 
       const token = ++cancelTokenRef.current;
       const snapMeta = buildSnapshotBadge();
       const promptText = target.promptForRegenerate || 'Summarize current chamber telemetry';
-
-      const outOfScopeAnswer =
-        target.kind === 'diagnostic'
-          ? null
-          : checkOutOfScopeQuery(promptText, params, telemetry, matched, unitSystem);
-
-      const fastPathAnswer =
-        target.kind === 'diagnostic' || outOfScopeAnswer !== null
-          ? null
-          : quickRuleMatch(promptText, params, telemetry, matched, unitSystem, markers);
-
-      const useWebGpu =
-        outOfScopeAnswer === null &&
-        fastPathAnswer === null &&
-        Boolean(
-          engineInstance &&
-            status === 'Offline WebGPU Ready' &&
-            (hardwareProfile?.tier !== 'constrained' ||
-              (manualWebGpuOverrideRef.current && hardwareProfile?.hasWebGpu)),
-        );
-
-      const backendLabel =
-        outOfScopeAnswer !== null
-          ? '1D Scope Guardrail'
-          : useWebGpu
-            ? `${formatModelFamilyLabel(activeModelId ?? preferredModelFamily)} Local WebGPU`
-            : 'Deterministic Telemetry Engine';
-
-      const steps = buildSafetyReasoningSteps(
-        params,
-        telemetry,
-        matched,
-        unitSystem,
-        target.kind ?? 'chat',
-        markers,
-        backendLabel,
-      );
       const startedAt = performance.now();
 
-      setIsGenerating(true);
-      setRegeneratingMessageId(assistantMsgId);
-      setActiveThinking({
-        id: `${assistantMsgId}-regen`,
-        kind: target.kind ?? 'chat',
-        activeLabel: useWebGpu ? 'Thinking · Local WebGPU' : 'Re-evaluating chamber telemetry',
-        steps,
-        stepIntervalMs: useWebGpu ? 750 : 280,
-      });
-
-      let nextContent = '';
-      let nextSource: SafetyMessageSource =
-        outOfScopeAnswer !== null ? 'Not modeled' : 'Deterministic';
-      let nextReasoningPath: string | undefined;
-      let nextReasoningFailed = false;
-      let nextReasoningFailureNote: string | undefined;
-
       if (target.kind === 'diagnostic') {
-        nextContent = verifiedSnapshot.rawText;
-      } else if (outOfScopeAnswer !== null) {
-        nextContent = outOfScopeAnswer;
-      } else {
-        nextContent =
-          fastPathAnswer ??
-          buildGroundedChatAnswer(promptText, params, telemetry, matched, unitSystem, markers);
+        const steps = buildSafetyReasoningSteps(
+          params,
+          telemetry,
+          matched,
+          unitSystem,
+          'diagnostic',
+          markers,
+          'Deterministic Telemetry Engine',
+          manualExtinguish,
+        );
+        setIsGenerating(true);
+        setRegeneratingMessageId(assistantMsgId);
+        setActiveThinking({
+          id: `${assistantMsgId}-regen`,
+          kind: 'diagnostic',
+          activeLabel: 'Re-evaluating chamber telemetry',
+          steps,
+          stepIntervalMs: 280,
+        });
+        try {
+          const completed = await awaitReasoningTrace(token, 1180);
+          if (!completed || cancelTokenRef.current !== token) return;
+        } finally {
+          if (cancelTokenRef.current === token) {
+            setActiveThinking(null);
+            setRegeneratingMessageId(null);
+            setIsGenerating(false);
+          }
+        }
+        if (cancelTokenRef.current !== token) return;
+        const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
+        setMessages((prev) => {
+          const nextThread = prev.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  content: verifiedSnapshot.rawText,
+                  source: 'Deterministic' as SafetyMessageSource,
+                  snapshot: snapMeta,
+                  thoughtSteps: steps,
+                  thoughtDurationS: durationS,
+                  reasoningPath: undefined,
+                  reasoningFailedValidation: false,
+                  reasoningFailureNote: undefined,
+                  createdAtMs: Date.now(),
+                }
+              : m,
+          );
+          messagesRef.current = nextThread;
+          const updatedMsg = nextThread.find((m) => m.id === assistantMsgId);
+          if (updatedMsg) {
+            setSessionArchive((arch) =>
+              arch.map((item) =>
+                item.id === assistantMsgId
+                  ? { ...updatedMsg, threadSnapshot: nextThread }
+                  : item,
+              ),
+            );
+          }
+          return nextThread;
+        });
+        return;
+      }
+
+      const intent = classifyIntent(promptText);
+      const profile = hardwareProfile ?? (await getHardwareProfile());
+      const canUseWebLlm = Boolean(
+        engineInstance &&
+          status === 'Offline WebGPU Ready' &&
+          (profile.tier !== 'constrained' ||
+            (manualWebGpuOverrideRef.current && profile.hasWebGpu)),
+      );
+      const modelFamilyLabel = formatModelFamilyLabel(activeModelId ?? preferredModelFamily);
+      const isPreIgnitionQuench =
+        telemetry.chamberState === 'STANDBY' &&
+        /\b(?:quench|quenched|extinguished|not\s+burning|isn't\s+burning|is\s+not\s+burning)\b/i.test(
+          promptText,
+        );
+      const willInvokeLlm = intent === 'EXPLAIN' && canUseWebLlm && !isPreIgnitionQuench;
+
+      if (willInvokeLlm) {
+        const previewSteps = buildSafetyReasoningSteps(
+          params,
+          telemetry,
+          matched,
+          unitSystem,
+          'chat',
+          markers,
+          `${modelFamilyLabel} Local WebGPU`,
+          manualExtinguish,
+        );
+        setIsGenerating(true);
+        setRegeneratingMessageId(assistantMsgId);
+        setActiveThinking({
+          id: `${assistantMsgId}-regen`,
+          kind: 'chat',
+          activeLabel: 'Thinking · Local WebGPU',
+          steps: previewSteps,
+          stepIntervalMs: 750,
+        });
       }
 
       try {
-        if (useWebGpu && engineInstance) {
-          const profile = hardwareProfile ?? (await getHardwareProfile());
-          const prompt =
-            target.kind === 'diagnostic'
-              ? buildWebLlmPrompt(params, telemetry, matched, unitSystem)
-              : promptText;
-          const sys =
-            target.kind === 'diagnostic'
-              ? `You are the Ignimetheus Spacecraft Fire Safety Officer. Provide crisp, technical fire-suppression orders citing the exact NASA PSI run ID without emojis. ${NUMERIC_GUARDRAIL_INSTRUCTION}`
-              : buildTieredSystemPrompt(
-                  params,
-                  telemetry,
-                  matched,
-                  unitSystem,
-                  profile.systemPromptBudget,
-                );
-          const evaluation = await runAuditedWebGpuCompletion([
-            { role: 'system', content: sys },
-            { role: 'user', content: prompt },
-          ]);
-          if (cancelTokenRef.current !== token) return;
-          if (evaluation?.auditedText) {
-            nextContent = evaluation.auditedText;
-            nextSource = 'Local model (numbers audited)';
-            nextReasoningPath = evaluation.reasoningPath;
-            nextReasoningFailed = false;
-            nextReasoningFailureNote = undefined;
-          } else if (evaluation) {
-            nextReasoningPath = evaluation.reasoningPath;
-            nextReasoningFailed = Boolean(
-              evaluation.reasoningFailedValidation || evaluation.auditResult?.passed === false,
+        const result = await executeSafetyAdvisorTurn({
+          question: promptText,
+          params,
+          telemetry,
+          matched,
+          unitSystem,
+          markers,
+          manualExtinguish,
+          canUseWebLlm,
+          modelFamilyLabel,
+          systemPromptBudget: profile.systemPromptBudget,
+          llmInvoker: willInvokeLlm ? invokeRawWebGpuCompletion : undefined,
+          counters: debugCountersRef.current,
+        });
+        if (cancelTokenRef.current !== token) return;
+        debugCountersRef.current = result.counters;
+        setDebugCounters(result.counters);
+
+        const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
+        setMessages((prev) => {
+          const nextThread = prev.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  content: result.content,
+                  source: result.source,
+                  intent: result.intent,
+                  snapshot: result.includeTelemetryCard ? snapMeta : undefined,
+                  thoughtSteps: result.reasoningSteps,
+                  thoughtDurationS: result.reasoningSteps.length > 0 ? durationS : undefined,
+                  reasoningPath: result.reasoningPath,
+                  reasoningFailedValidation: result.reasoningFailedValidation,
+                  reasoningFailureNote: result.reasoningFailureNote,
+                  exampleQuestions: result.exampleQuestions,
+                  createdAtMs: Date.now(),
+                }
+              : m,
+          );
+          messagesRef.current = nextThread;
+          const updatedMsg = nextThread.find((m) => m.id === assistantMsgId);
+          if (updatedMsg) {
+            setSessionArchive((arch) =>
+              arch.map((item) =>
+                item.id === assistantMsgId
+                  ? { ...updatedMsg, threadSnapshot: nextThread }
+                  : item,
+              ),
             );
-            nextReasoningFailureNote =
-              evaluation.reasoningFailureNote ??
-              (nextReasoningFailed ? REASONING_VALIDATION_FAILED_NOTE : undefined);
           }
-        } else if (outOfScopeAnswer === null && fastPathAnswer === null) {
-          const completed = await awaitReasoningTrace(token, 1180);
-          if (!completed || cancelTokenRef.current !== token) return;
-        }
-      } catch {
-        // Keep verified deterministic snapshot text
+          return nextThread;
+        });
+        setLastUpdatedLabel(result.source);
       } finally {
-        if (cancelTokenRef.current === token) {
+        if (willInvokeLlm && cancelTokenRef.current === token) {
           setActiveThinking(null);
           setRegeneratingMessageId(null);
           setIsGenerating(false);
         }
       }
-
-      if (cancelTokenRef.current !== token) return;
-      const durationS = Math.max(0.1, (performance.now() - startedAt) / 1000);
-      const thinkNodes = parseThinkSteps(nextReasoningPath);
-      const mergedSteps = thinkNodes.length > 0 ? [...steps, ...thinkNodes] : steps;
-      setMessages((prev) => {
-        const nextThread = prev.map((m) =>
-          m.id === assistantMsgId
-            ? {
-                ...m,
-                content: nextContent,
-                source: nextSource,
-                snapshot: snapMeta,
-                thoughtSteps: mergedSteps,
-                thoughtDurationS: durationS,
-                reasoningPath: nextReasoningPath,
-                reasoningFailedValidation: nextReasoningFailed,
-                reasoningFailureNote: nextReasoningFailureNote,
-                createdAtMs: Date.now(),
-              }
-            : m,
-        );
-        messagesRef.current = nextThread;
-        const updatedMsg = nextThread.find((m) => m.id === assistantMsgId);
-        if (updatedMsg) {
-          setSessionArchive((arch) =>
-            arch.map((item) =>
-              item.id === assistantMsgId
-                ? { ...updatedMsg, threadSnapshot: nextThread }
-                : item,
-            ),
-          );
-        }
-        return nextThread;
-      });
     },
     [
+      activeModelId,
       awaitReasoningTrace,
       buildSnapshotBadge,
       hardwareProfile,
+      invokeRawWebGpuCompletion,
       isGenerating,
+      manualExtinguish,
       markers,
       matched,
-      messages,
       params,
-      runAuditedWebGpuCompletion,
+      preferredModelFamily,
       status,
       telemetry,
       unitSystem,
@@ -1319,6 +1140,7 @@ export function useSafetyOfficerLLM({
     tierStatusLabel,
     auditPassCount,
     auditFailCount,
+    debugCounters,
     isGenerating,
     activeThinking,
     regeneratingMessageId,

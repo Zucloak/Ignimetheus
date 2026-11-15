@@ -123,7 +123,7 @@ export function buildVerdictToastInput(
     verdict.reason === 'SELF_EXTINGUISHED'
       ? `Self-extinguished at ${burnStr} in ${timeStr}`
       : isPass
-        ? `Contained propagation: ${burnStr} in ${timeStr} (<= 152 mm limit)`
+        ? `Contained propagation: ${burnStr} in ${timeStr} (<= 152 mm ref; 0g duct sim != STD-6001)`
         : `Sustained propagation: ${burnStr} in ${timeStr}`;
 
   return {

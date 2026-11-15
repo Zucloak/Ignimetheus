@@ -6,11 +6,16 @@ import {
   Tick01Icon,
 } from '@hugeicons/core-free-icons';
 import {
+  formatAdaptedDiscrepancyNote,
+  formatExperimentBurnSummary,
+  formatExperimentPsiAndDoi,
   parseThinkSteps,
   QUICK_SAFETY_QUESTIONS,
   REASONING_VALIDATION_FAILED_NOTE,
+  STD_6001_DISCLAIMER_SHORT,
   stripEmojis,
   tokenizeInlineMetricPills,
+  type AdvisorDebugCounters,
   type SafetyRecommendation,
 } from '../engine/safetyAdvisor';
 import {
@@ -40,6 +45,7 @@ interface SafetyResponseStreamProps {
   tierStatusLabel?: string;
   auditPassCount?: number;
   auditFailCount?: number;
+  debugCounters?: AdvisorDebugCounters;
   onSendMessage: (msg: string) => void;
   onRegenerateMessage: (msgId: string) => void;
   onLoadExperiment: (exp: NasaPsiExperiment) => void;
@@ -100,7 +106,7 @@ function renderStructuredAssistantBody(content: string): React.ReactNode {
     }
 
     const labeled = line.match(
-      /^(STATUS|DIAGNOSIS|HVAC|ATMOS|SUPPRESSION|NASA PSI CITATION|Cited Run):\s*(.+)$/,
+      /^(STATUS|DIAGNOSIS|FLOW LEVER|O2 \/ N2 LEVER|HARDWARE LEVERS|REFERENCE|0G TELEMETRY|1G TELEMETRY|HVAC|ATMOS|SUPPRESSION|NASA PSI CITATION|Cited Run):\s*(.+)$/,
     );
     if (labeled) {
       flushBullets(`b-${idx}`);
@@ -133,8 +139,8 @@ function renderStructuredAssistantBody(content: string): React.ReactNode {
   return elements;
 }
 
-function getHazardDot(hazard: SafetyRecommendation['hazardLevel']): string {
-  if (hazard === 'CRITICAL') return 'bg-rose-300';
+function getHazardDot(hazard: SafetyRecommendation['hazardLevel'] | string): string {
+  if (hazard === 'CRITICAL' || hazard === 'HIGH_RATE') return 'bg-rose-300';
   if (hazard === 'ELEVATED') return 'bg-amber-300';
   if (hazard === 'EXTINGUISHED') return 'bg-cyan-300';
   return 'bg-zinc-400';
@@ -150,8 +156,7 @@ export const SafetyResponseStream: React.FC<SafetyResponseStreamProps> = ({
   regeneratingMessageId,
   highlightedMessageId,
   tierStatusLabel = 'Tier: constrained · Deterministic',
-  auditPassCount = 0,
-  auditFailCount = 0,
+  debugCounters,
   onSendMessage,
   onRegenerateMessage,
   onLoadExperiment,
@@ -159,6 +164,9 @@ export const SafetyResponseStream: React.FC<SafetyResponseStreamProps> = ({
 }) => {
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const isDebugMode =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('debug') === '1';
 
   const handleCopy = async (id: string, text: string) => {
     try {
@@ -174,9 +182,9 @@ export const SafetyResponseStream: React.FC<SafetyResponseStreamProps> = ({
 
   return (
     <main
-      aria-label="AI Fire Safety Officer Stream"
+      aria-label="Telemetry Assistant Stream"
       data-testid="safety-chat-history"
-      className="mx-auto w-full max-w-3xl px-4 sm:px-6 pt-3 pb-44"
+      className="mx-auto w-full max-w-3xl px-4 sm:px-6 pt-3 pb-48"
     >
       <div
         data-testid="safety-officer-status-bar"
@@ -185,7 +193,10 @@ export const SafetyResponseStream: React.FC<SafetyResponseStreamProps> = ({
         <div className="flex items-center gap-2">
           <span className={`h-1.5 w-1.5 rounded-full ${getHazardDot(verifiedSnapshot.hazardLevel)}`} />
           <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#F4F4F5]">
-            Onboard Fire Safety Officer · {verifiedSnapshot.hazardLevel}
+            Telemetry Assistant ·{' '}
+            {verifiedSnapshot.hazardLevel === 'HIGH_RATE'
+              ? 'HIGH RATE'
+              : verifiedSnapshot.hazardLevel}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] tabular-nums text-[#71717A]">
@@ -195,17 +206,23 @@ export const SafetyResponseStream: React.FC<SafetyResponseStreamProps> = ({
           >
             {tierStatusLabel}
           </span>
-          {(auditPassCount > 0 || auditFailCount > 0) && (
-            <span
-              data-testid="safety-audit-counter"
-              className="rounded border border-[#27272A] bg-[#141418] px-1.5 py-0.5 text-[10px] text-[#A1A1AA]"
-            >
-              Audit {auditPassCount}P / {auditFailCount}F
-            </span>
-          )}
           <span>Grounded in {matched.experiment.id}</span>
         </div>
       </div>
+
+      {isDebugMode && debugCounters && (
+        <div
+          data-testid="safety-debug-panel"
+          className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#27272A] bg-[#111114] px-2.5 py-1.5 font-mono text-[10px] tabular-nums text-[#A1A1AA]"
+        >
+          <span className="font-semibold text-[#F4F4F5]">DEBUG</span>
+          <span>auditPass={debugCounters.auditPass}</span>
+          <span>auditReject={debugCounters.auditReject}</span>
+          <span>authorityReject={debugCounters.authorityReject}</span>
+          <span>truncationFallback={debugCounters.truncationFallback}</span>
+          <span>llmCalls={debugCounters.llmCalls}</span>
+        </div>
+      )}
 
       {messages.length === 0 ? (
         <section className="flex flex-col gap-3 py-1">
@@ -221,7 +238,7 @@ export const SafetyResponseStream: React.FC<SafetyResponseStreamProps> = ({
               disabled={isGenerating}
               className="rounded-lg bg-[#F4F4F5] px-3 py-1.5 text-xs font-medium text-[#09090B] hover:bg-white cursor-pointer disabled:opacity-45"
             >
-              Run Protocol Diagnostic
+              Run Telemetry Diagnostic
             </button>
             {QUICK_SAFETY_QUESTIONS.map((q) => (
               <button
@@ -260,7 +277,7 @@ export const SafetyResponseStream: React.FC<SafetyResponseStreamProps> = ({
                 : null;
             const expBurnDisplay = expBurn
               ? `${expBurn.text} ${expBurn.unit}`
-              : `Coupon: ${exp.sampleLengthMm ?? 940} × ${exp.sampleWidthMm ?? 406} mm (burn length unverified)`;
+              : formatExperimentBurnSummary(exp);
             const expSpread =
               exp.observedSpreadRateMmS !== null
                 ? formatSpreadRate(exp.observedSpreadRateMmS / 1000, unitSystem)
@@ -313,6 +330,25 @@ export const SafetyResponseStream: React.FC<SafetyResponseStreamProps> = ({
 
                 <div className="px-0.5">{renderStructuredAssistantBody(stripEmojis(msg.content))}</div>
 
+                {msg.exampleQuestions && msg.exampleQuestions.length > 0 && (
+                  <div
+                    data-testid={`about-examples-${msg.id}`}
+                    className="flex flex-wrap items-center gap-1.5 px-0.5"
+                  >
+                    {msg.exampleQuestions.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => onSendMessage(q)}
+                        disabled={isGenerating}
+                        className="rounded-lg border border-[#1F1F24] bg-[#111114] px-2.5 py-1 text-xs text-[#A1A1AA] hover:border-[#27272A] hover:text-[#F4F4F5] cursor-pointer disabled:opacity-45"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {snap && (
                   <div
                     data-testid={`telemetry-match-card-${msg.id}`}
@@ -358,8 +394,13 @@ export const SafetyResponseStream: React.FC<SafetyResponseStreamProps> = ({
                           </div>
                           <div>
                             <span className="text-[#71717A]">Observed </span>
-                            <span className="text-[#E4E4E7]">
-                              {expSpread ? `${expSpread.text} ${expSpread.unit}` : 'Criterion <= 152 mm'}
+                            <span
+                              className="text-[#E4E4E7]"
+                              title={expSpread ? undefined : STD_6001_DISCLAIMER_SHORT}
+                            >
+                              {expSpread
+                                ? `${expSpread.text} ${expSpread.unit}`
+                                : 'Ref <= 152 mm (0g duct != STD-6001)'}
                             </span>
                           </div>
                           <div>
@@ -377,11 +418,11 @@ export const SafetyResponseStream: React.FC<SafetyResponseStreamProps> = ({
                         </div>
                         <p className="leading-relaxed">
                           <span className="font-medium text-[#F4F4F5]">Flight Note: </span>
-                          {exp.discrepancyNote1gVsUg}
+                          {formatAdaptedDiscrepancyNote(exp)}
                         </p>
                         <div className="font-mono text-[10.5px] text-[#71717A]">
-                          {exp.psiInvestigationId && exp.doi
-                            ? `${exp.psiInvestigationId} · DOI ${exp.doi} (${exp.license ?? 'CC0-1.0'}) · `
+                          {exp.psiInvestigationId || exp.doi
+                            ? `${formatExperimentPsiAndDoi(exp)} (${exp.license ?? 'CC0-1.0'}) · `
                             : ''}
                           {MATERIALS[exp.materialId].shortName} · {exp.sampleThicknessMm}mm
                         </div>

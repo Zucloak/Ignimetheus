@@ -144,3 +144,15 @@ input[type="range"].telemetry-slider:focus-visible {
   animation: thoughtline-shimmer 2.4s linear infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+

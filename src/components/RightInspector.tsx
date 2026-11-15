@@ -31,11 +31,19 @@ import {
   formatVelocity,
   type UnitSystem,
 } from '../engine/units';
+import {
+  formatExperimentBurnSummary,
+  formatExperimentPsiAndDoi,
+  STD_6001_DISCLAIMER_SHORT,
+} from '../engine/safetyAdvisor';
+import { ModelVsNasaCard } from './ModelVsNasaCard';
 
 interface RightInspectorProps {
   params: SimulationParams;
   telemetry: ThermoTelemetry;
   matched: MatchedExperimentResult;
+  allExperiments?: NasaPsiExperiment[];
+  activeComparisonExperiment?: NasaPsiExperiment | null;
   unitSystem: UnitSystem;
   markers: CadMarker[];
   pendingCaliperStart: { xMm: number; yMm: number } | null;
@@ -43,6 +51,8 @@ interface RightInspectorProps {
   mobileOpen: boolean;
   onCloseMobile: () => void;
   onLoadExperiment: (exp: NasaPsiExperiment) => void;
+  onPrevNasaRun?: () => void;
+  onNextNasaRun?: () => void;
   onPinCenterlineProbe: () => void;
   onRemoveMarker: (id: string) => void;
   onClearMarkers: () => void;
@@ -59,6 +69,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   params,
   telemetry,
   matched,
+  allExperiments = [],
+  activeComparisonExperiment = null,
   unitSystem,
   markers,
   pendingCaliperStart,
@@ -66,6 +78,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   mobileOpen,
   onCloseMobile,
   onLoadExperiment,
+  onPrevNasaRun,
+  onNextNasaRun,
   onPinCenterlineProbe,
   onRemoveMarker,
   onClearMarkers,
@@ -97,7 +111,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
       : null;
   const expBurnDisplay = expBurn
     ? `${expBurn.text} ${expBurn.unit}`
-    : `Coupon: ${exp.sampleLengthMm ?? 940} × ${exp.sampleWidthMm ?? 406} mm (burn length unverified)`;
+    : formatExperimentBurnSummary(exp);
   const expSpread =
     exp.observedSpreadRateMmS !== null
       ? formatSpreadRate(exp.observedSpreadRateMmS / 1000, unitSystem)
@@ -159,6 +173,14 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
 
       {/* Scrollable Pure-Telemetry Accordions */}
       <div className="flex-1 overflow-y-auto divide-y divide-[#1F1F24]">
+        <ModelVsNasaCard
+          experiment={activeComparisonExperiment}
+          allExperiments={allExperiments}
+          onPrevRun={onPrevNasaRun}
+          onNextRun={onNextNasaRun}
+          placement="inspector"
+        />
+
         {/* Accordion 1: Live Thermo-Fluids Telemetry (Expanded by default) */}
         <section aria-label="Live Thermo-Fluids Telemetry" className="px-3.5 py-2.5">
           <button
@@ -179,7 +201,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
 
           <div className="accordion-content" data-open={liveTelemetryOpen}>
             <div className="accordion-inner">
-              <div className="mt-2.5 flex flex-col gap-2">
+              <div data-tour="right-inspector" className="mt-2.5 flex flex-col gap-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border border-[#1F1F24] bg-[#111114] px-2.5 py-2">
                     <div className="text-[10px] font-mono uppercase tracking-wider text-[#71717A]">
@@ -350,7 +372,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
 
           <div className="accordion-content" data-open={benchmarkOpen}>
             <div className="accordion-inner">
-              <div className="mt-2.5 rounded-lg border border-[#1F1F24] bg-[#111114] p-2.5 flex flex-col gap-2">
+              <div data-tour="reference-match" className="mt-2.5 rounded-lg border border-[#1F1F24] bg-[#111114] p-2.5 flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -370,13 +392,13 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
                     <div className="mt-0.5 text-[11px] leading-snug text-[#A1A1AA] line-clamp-2">
                       {exp.title}
                     </div>
-                    {exp.psiInvestigationId && exp.doi && (
+                    {(exp.psiInvestigationId || exp.doi) && (
                       <div
                         data-testid="matched-exp-psi-doi"
-                        className="mt-1 font-mono text-[10px] tabular-nums text-[#71717A] truncate"
-                        title={`${exp.psiInvestigationId} · DOI ${exp.doi} (${exp.license ?? 'CC0-1.0'})`}
+                        className="mt-1 font-mono text-[10px] leading-snug tabular-nums text-[#71717A] break-words"
+                        title={`${formatExperimentPsiAndDoi(exp)} (${exp.license ?? 'CC0-1.0'})`}
                       >
-                        {exp.psiInvestigationId} · DOI {exp.doi}
+                        {formatExperimentPsiAndDoi(exp)}
                       </div>
                     )}
                   </div>
@@ -413,8 +435,13 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
                       </div>
                       <div>
                         <span className="text-[#71717A]">Spread </span>
-                        <span className="text-[#E4E4E7]">
-                          {expSpread ? `${expSpread.text} ${expSpread.unit}` : 'Criterion <= 152 mm'}
+                        <span
+                          className="text-[#E4E4E7]"
+                          title={expSpread ? undefined : STD_6001_DISCLAIMER_SHORT}
+                        >
+                          {expSpread
+                            ? `${expSpread.text} ${expSpread.unit}`
+                            : 'Ref <= 152 mm (0g duct != STD-6001)'}
                         </span>
                       </div>
                       <div>
@@ -434,9 +461,9 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
                     )}
                     <div className="flex flex-wrap items-center justify-between gap-1.5 font-mono text-[10px] text-[#71717A]">
                       <span>
-                        {exp.psiInvestigationId && exp.doi
-                          ? `${exp.psiInvestigationId} · DOI ${exp.doi} · ${exp.license ?? 'CC0-1.0'}`
-                          : exp.psiCitation}
+                        {exp.psiInvestigationId || exp.doi
+                          ? `${formatExperimentPsiAndDoi(exp)} · ${exp.license ?? 'CC0-1.0'}`
+                          : formatExperimentPsiAndDoi(exp)}
                       </span>
                       <span
                         data-testid="matched-exp-verification-status"

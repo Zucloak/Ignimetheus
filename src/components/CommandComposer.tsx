@@ -52,7 +52,7 @@ interface SlashCommandOption {
 
 const STATIC_MENTION_OPTIONS: MentionOption[] = [
   { token: '@BASS-II-14', label: '@BASS-II-14', description: 'PMMA 15 cm/s ISS Nominal' },
-  { token: '@SAFFIRE-II-03', label: '@SAFFIRE-II-03', description: 'Nomex HT90-40 Limit Test' },
+  { token: '@SAFFIRE-II-07', label: '@SAFFIRE-II-07', description: 'Nomex Saffire-II Limit Test' },
   { token: '@FLEX', label: '@FLEX', description: 'Quiescent Microgravity Radiation' },
   { token: '@TC-3', label: '@TC-3', description: 'Flame Core Thermocouple Sensor' },
   { token: '@TC-1..6', label: '@TC-1..6', description: 'Live Thermocouple Array Readings' },
@@ -62,7 +62,7 @@ const STATIC_MENTION_OPTIONS: MentionOption[] = [
 const SLASH_OPTIONS: SlashCommandOption[] = [
   { id: 'ignite', command: '/ignite', description: 'Pulse 80W Nichrome Igniter' },
   { id: 'extinguish', command: '/extinguish', description: 'Extinguish Chamber Flame' },
-  { id: 'diagnostic', command: '/diagnostic', description: 'Run Protocol Diagnostic' },
+  { id: 'diagnostic', command: '/diagnostic', description: 'Run Telemetry Diagnostic' },
   { id: 'preset-orion', command: '/preset-orion', description: 'Load Orion / Artemis 34% O2' },
   { id: 'preset-quench', command: '/preset-quench', description: 'Load Ventilation Shutdown (0 cm/s)' },
   { id: 'reset', command: '/reset', description: 'Reset Parameters to ISS Nominal' },
@@ -444,7 +444,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
               {[
                 ...QUICK_SAFETY_QUESTIONS,
                 'Analyze @TC-1..6 thermal gradient',
-                'Compare @SAFFIRE-II-03 with @BASS-II-14',
+                'Compare @SAFFIRE-II-07 with @BASS-II-14',
                 ...(markers[0] ? [`Inspect @${markers[0].id} local field`] : []),
               ].map((q) => (
                 <button
@@ -509,7 +509,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
               <div className="min-w-0 pr-2">
                 <div className="font-medium">Qwen3-0.6B Local WebGPU</div>
                 <div className="text-[10.5px] text-[#71717A]">
-                  Hybrid &lt;think&gt; reasoning · Audited telemetry
+                  Hybrid &lt;think&gt; reasoning · Figures checked
                 </div>
                 <div className="text-[10px] font-mono text-[#52525B] truncate">
                   {qwen3DisplayModelId}
@@ -608,7 +608,10 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
         )}
 
         {/* Outer Two-Tier Composer Shell */}
-        <div className="rounded-2xl border border-[#222226] bg-[#111114]/96 backdrop-blur-xl shadow-2xl overflow-hidden">
+        <div
+          data-tour="telemetry-assistant"
+          className="rounded-2xl border border-[#222226] bg-[#111114]/96 backdrop-blur-xl shadow-2xl overflow-hidden"
+        >
           <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-1 border-b border-[#1F1F24] px-3 py-1.5">
             <div className="flex items-center gap-1.5 shrink-0">
               <button
@@ -695,8 +698,8 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask safety officer (@ cite, / actions)"
-              aria-label="Ask AI Safety Officer"
+              placeholder="Ask about this run (@ cite, / actions)"
+              aria-label="Ask Telemetry Assistant"
               className="w-full min-h-[38px] resize-none bg-transparent text-sm text-[#F4F4F5] placeholder:text-[#71717A] focus:outline-none leading-relaxed"
             />
 
@@ -710,7 +713,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
                     setPresetMenuOpen(false);
                     setQuickTuneOpen(false);
                   }}
-                  aria-label="Insert quick safety question"
+                  aria-label="Insert quick telemetry question"
                   aria-expanded={plusOpen}
                   className="inline-flex h-7 w-7 items-center justify-center rounded-md border-0 bg-transparent text-[#A1A1AA] transition-colors hover:bg-[#222227]/70 hover:text-[#F4F4F5] shrink-0 cursor-pointer"
                 >
@@ -796,6 +799,13 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
                 <span>{webGpuUnavailableNote}</span>
               </div>
             )}
+
+            <div
+              data-testid="composer-disclaimer"
+              className="mt-1.5 border-t border-[#222226] pt-1 text-[10.5px] text-[#71717A]"
+            >
+              Explains this simulation. Not a safety authority.
+            </div>
           </div>
         </div>
       </div>

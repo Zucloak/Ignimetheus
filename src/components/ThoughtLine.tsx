@@ -57,8 +57,8 @@ const DEFAULT_TELEMETRY_STEPS: ThoughtStep[] = [
   },
   {
     id: 'step-protocol',
-    label: 'Synthesizing ECLSS damper & suppressant protocol',
-    detail: 'Grounding recommendations in live thermocouple & marker telemetry',
+    label: 'Evaluating mitigation levers modeled in this simulation',
+    detail: 'Grounding outputs in live thermocouple & marker telemetry',
   },
 ];
 
@@ -440,7 +440,7 @@ export function ThoughtLine({
       data-thinking={isThinking ? 'true' : 'false'}
       className={`select-none text-xs text-[#A1A1AA] ${className}`}
       role="region"
-      aria-label="AI Safety Officer reasoning trace"
+      aria-label="Telemetry Assistant reasoning trace"
     >
       <button
         type="button"

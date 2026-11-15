@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import experimentsJson from './data/nasaPsiExperiments.json';
 import { CommandComposer, type SlashActionId } from './components/CommandComposer';
 import { LeftSidebar } from './components/LeftSidebar';
+import { ModelVsNasaCard } from './components/ModelVsNasaCard';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { RightInspector } from './components/RightInspector';
 import { SafetyResponseStream } from './components/SafetyResponseStream';
 import { SimulationStage, type ViewportMode } from './components/SimulationStage';
 import { ToastStack } from './components/ToastStack';
+import { getAdjacentCycleExperiment, getParamsForExperiment } from './engine/nasaComparison';
 import {
   getInitialCadMarkers,
   nextMarkerId,
@@ -31,7 +33,6 @@ import {
   extinguishChamber,
   getInitialChamberForParams,
   MATERIALS,
-  matchClosestExperiment,
   MISSION_PRESETS,
   resetChamberToStandby,
   stepChamberTransient,
@@ -43,11 +44,16 @@ import {
   type TestDurationMode,
   type TestVerdict,
 } from './engine/thermoCore';
+import { matchClosestReferenceForParams } from './engine/safetyAdvisor';
 import type { UnitSystem } from './engine/units';
 import { parseStateFromSearch, serializeStateToSearch } from './engine/urlSync';
+import { useOnboarding } from './hooks/useOnboarding';
 import { useSafetyOfficerLLM } from './hooks/useSafetyOfficerLLM';
 
 const NASA_PSI_EXPERIMENTS = experimentsJson as NasaPsiExperiment[];
+const LazyOnboarding = lazy(() =>
+  import('./components/Onboarding').then((m) => ({ default: m.Onboarding })),
+);
 
 export default function App() {
   const initial = useMemo(() => {
@@ -92,10 +98,21 @@ export default function App() {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const centerStreamRef = useRef<HTMLDivElement | null>(null);
   const highlightTimerRef = useRef<number | null>(null);
+  const helpButtonRef = useRef<HTMLButtonElement | null>(null);
+  const onboarding = useOnboarding();
+  const [selectedExperimentId, setSelectedExperimentId] = useState<string | null>(null);
 
   const [chamber, setChamber] = useState<ChamberTransientInput>(() =>
     getInitialChamberForParams(initial.params),
   );
+  const [manualExtinguish, setManualExtinguish] = useState(false);
+  const chamberStateRef = useRef(chamber.state);
+  useEffect(() => {
+    chamberStateRef.current = chamber.state;
+    if (chamber.state !== 'SELF_EXTINGUISHED' && manualExtinguish) {
+      setManualExtinguish(false);
+    }
+  }, [chamber.state, manualExtinguish]);
 
   const pushToast = useCallback((input: EnqueueToastInput) => {
     toastSeqRef.current += 1;
@@ -125,15 +142,23 @@ export default function App() {
     prevVerdictRef.current = currentVerdict;
   }, [chamber.testVerdict, params, pushToast]);
 
-  // Sync simulation state to URL query parameters (preserving ?tier= override if present)
+  // Sync simulation state to URL query parameters (preserving ?tier=, ?debug=, and ?onboarding= overrides if present)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const currentParams = new URLSearchParams(window.location.search);
     const tierParam = currentParams.get('tier');
+    const debugParam = currentParams.get('debug');
+    const onboardingParam = currentParams.get('onboarding');
     const serialized = serializeStateToSearch(params, unitSystem);
     const nextParams = new URLSearchParams(serialized);
     if (tierParam) {
       nextParams.set('tier', tierParam);
+    }
+    if (debugParam) {
+      nextParams.set('debug', debugParam);
+    }
+    if (onboardingParam !== null) {
+      nextParams.set('onboarding', onboardingParam);
     }
     const nextSearch = `?${nextParams.toString()}`;
     if (window.location.search !== nextSearch) {
@@ -175,11 +200,15 @@ export default function App() {
 
   const handlePulseIgniter = useCallback(() => {
     setIsPlaying(true);
+    setManualExtinguish(false);
     setChamber((prev) => triggerIgniterPulse(prev));
   }, []);
 
   const handleExtinguishChamber = useCallback(() => {
     setIsPlaying(true);
+    const activeBurn =
+      chamberStateRef.current === 'IGNITING' || chamberStateRef.current === 'SUSTAINED_BURN';
+    setManualExtinguish(activeBurn);
     setChamber((prev) => {
       if (prev.state === 'IGNITING' || prev.state === 'SUSTAINED_BURN') {
         return extinguishChamber(prev);
@@ -190,6 +219,9 @@ export default function App() {
 
   const handleToggleCombustion = useCallback(() => {
     setIsPlaying(true);
+    const activeBurn =
+      chamberStateRef.current === 'IGNITING' || chamberStateRef.current === 'SUSTAINED_BURN';
+    setManualExtinguish(activeBurn);
     setChamber((prev) => {
       if (prev.state === 'IGNITING' || prev.state === 'SUSTAINED_BURN') {
         return extinguishChamber(prev);
@@ -200,6 +232,7 @@ export default function App() {
 
   const handleResetSpecimen = useCallback(() => {
     setIsPlaying(true);
+    setManualExtinguish(false);
     setChamber((prev) => resetChamberToStandby(prev, true));
   }, []);
 
@@ -263,12 +296,14 @@ export default function App() {
         const preset = MISSION_PRESETS[idx];
         if (preset) {
           const nextParams = { ...preset.params };
+          setSelectedExperimentId(null);
           setParams(nextParams);
           setMarkers([]);
           setPendingCaliperStart(null);
           setTestDuration(60);
           setPopoverResetSignal((s) => s + 1);
           setIsPlaying(true);
+          setManualExtinguish(false);
           setChamber(getInitialChamberForParams(nextParams));
           pushToast({
             kind: 'system',
@@ -301,9 +336,16 @@ export default function App() {
   const telemetry = useMemo(() => computeThermoTelemetry(params, chamber), [params, chamber]);
 
   const matchedExperiment = useMemo(
-    () => matchClosestExperiment(params, NASA_PSI_EXPERIMENTS),
+    () => matchClosestReferenceForParams(params, NASA_PSI_EXPERIMENTS),
     [params],
   );
+
+  const activeComparisonExperiment = useMemo(() => {
+    if (selectedExperimentId) {
+      return NASA_PSI_EXPERIMENTS.find((e) => e.id === selectedExperimentId) ?? null;
+    }
+    return matchedExperiment.experiment;
+  }, [selectedExperimentId, matchedExperiment.experiment]);
 
   const safetyOfficer = useSafetyOfficerLLM({
     params,
@@ -311,6 +353,7 @@ export default function App() {
     matched: matchedExperiment,
     unitSystem,
     markers,
+    manualExtinguish,
   });
 
   useEffect(() => {
@@ -372,6 +415,7 @@ export default function App() {
 
   const handleChangeParams = useCallback(
     (patch: Partial<SimulationParams>) => {
+      setSelectedExperimentId(null);
       setParams((prevParams) => {
         const prevHw = prevParams.hardware ?? {
           wakeBaffle: false,
@@ -425,12 +469,14 @@ export default function App() {
   const handleSelectPreset = useCallback(
     (preset: MissionPreset) => {
       const nextParams = { ...preset.params };
+      setSelectedExperimentId(null);
       setParams(nextParams);
       setMarkers([]);
       setPendingCaliperStart(null);
       setTestDuration(60);
       setPopoverResetSignal((s) => s + 1);
       setIsPlaying(true);
+      setManualExtinguish(false);
       setChamber(getInitialChamberForParams(nextParams));
       pushToast({
         kind: 'system',
@@ -444,23 +490,15 @@ export default function App() {
 
   const handleLoadExperiment = useCallback(
     (exp: NasaPsiExperiment) => {
-      const nextParams: SimulationParams = {
-        o2Percent: exp.o2Percent,
-        pressurePa: exp.pressurePa,
-        flowVelocityMs: exp.flowVelocityMs,
-        gravityMs2: exp.gravityMs2,
-        materialId: exp.materialId,
-        flowMode: exp.flowMode,
-        specimenGeometry:
-          exp.program === 'Saffire-II' ? 'sheet' : exp.program === 'FLEX' ? 'droplet' : 'rod',
-        ductScale: exp.id.startsWith('SAFFIRE-') ? 'saffire-40cm' : 'msg-12cm',
-      };
+      const nextParams = getParamsForExperiment(exp);
+      setSelectedExperimentId(exp.id);
       setParams(nextParams);
       setMarkers([]);
       setPendingCaliperStart(null);
       setTestDuration(60);
       setPopoverResetSignal((s) => s + 1);
       setIsPlaying(true);
+      setManualExtinguish(false);
       setChamber(getInitialChamberForParams(nextParams));
       pushToast({
         kind: 'system',
@@ -472,11 +510,37 @@ export default function App() {
     [pushToast],
   );
 
+  const handleRunNasaExperiment = useCallback(
+    (exp: NasaPsiExperiment) => {
+      handleLoadExperiment(exp);
+      setIsPlaying(true);
+      setManualExtinguish(false);
+      setChamber(triggerIgniterPulse(resetChamberToStandby(undefined, true)));
+    },
+    [handleLoadExperiment],
+  );
+
+  const handleCycleNasaRun = useCallback(
+    (direction: 'next' | 'prev') => {
+      const target = getAdjacentCycleExperiment(
+        activeComparisonExperiment?.id,
+        direction,
+        NASA_PSI_EXPERIMENTS,
+      );
+      if (target) {
+        handleLoadExperiment(target);
+      }
+    },
+    [activeComparisonExperiment?.id, handleLoadExperiment],
+  );
+
   const handleResetParams = useCallback(() => {
     const nextParams = { ...MISSION_PRESETS[0].params };
+    setSelectedExperimentId(null);
     setParams(nextParams);
     setTestDuration(60);
     setIsPlaying(true);
+    setManualExtinguish(false);
     setChamber(getInitialChamberForParams(nextParams));
     pushToast({
       kind: 'system',
@@ -491,6 +555,7 @@ export default function App() {
     setMarkers(getInitialCadMarkers());
     setPendingCaliperStart(null);
     setIsPlaying(true);
+    setManualExtinguish(false);
     setChamber(getInitialChamberForParams(params));
   }, [params, safetyOfficer]);
 
@@ -705,6 +770,7 @@ export default function App() {
           onNewSession={handleNewSession}
           onSelectPreset={handleSelectPreset}
           onLoadExperiment={handleLoadExperiment}
+          onRunNasaExperiment={handleRunNasaExperiment}
           onRestoreDiagnostic={handleRestoreDiagnostic}
           onClearDiagnostics={safetyOfficer.clearDiagnosticHistory}
         />
@@ -740,6 +806,7 @@ export default function App() {
             leftSidebarOpen={leftOpen}
             rightInspectorOpen={rightOpen}
             isPlaying={isPlaying}
+            manualExtinguish={manualExtinguish}
             isModelLoading={safetyOfficer.isModelLoading}
             showStreamlines={showStreamlines}
             showVectors={showVectors}
@@ -772,26 +839,42 @@ export default function App() {
             onExportCsv={handleExportCsv}
             onCopyShareUrl={handleCopyShareUrl}
             onSelectBackend={safetyOfficer.selectBackend}
+            helpButtonRef={helpButtonRef}
+            onOpenHelp={onboarding.openFromHelp}
           />
 
           {viewportMode !== 'fullscreen' && (
-            <SafetyResponseStream
-              messages={safetyOfficer.messages}
-              matched={matchedExperiment}
-              unitSystem={unitSystem}
-              verifiedSnapshot={safetyOfficer.verifiedSnapshot}
-              isGenerating={safetyOfficer.isGenerating}
-              activeThinking={safetyOfficer.activeThinking}
-              regeneratingMessageId={safetyOfficer.regeneratingMessageId}
-              highlightedMessageId={highlightedMessageId}
-              tierStatusLabel={safetyOfficer.tierStatusLabel}
-              auditPassCount={safetyOfficer.auditPassCount}
-              auditFailCount={safetyOfficer.auditFailCount}
-              onSendMessage={safetyOfficer.sendChatMessage}
-              onRegenerateMessage={safetyOfficer.regenerateMessage}
-              onLoadExperiment={handleLoadExperiment}
-              onRunDiagnostic={safetyOfficer.analyzeSuppressionProtocol}
-            />
+            <>
+              <div className={rightOpen ? 'lg:hidden' : ''}>
+                <ModelVsNasaCard
+                  key={`stage-${onboarding.isMobile ? 'mobile' : 'desktop'}`}
+                  experiment={activeComparisonExperiment}
+                  allExperiments={NASA_PSI_EXPERIMENTS}
+                  onPrevRun={() => handleCycleNasaRun('prev')}
+                  onNextRun={() => handleCycleNasaRun('next')}
+                  placement="stage"
+                  defaultCollapsed={onboarding.isMobile}
+                />
+              </div>
+              <SafetyResponseStream
+                messages={safetyOfficer.messages}
+                matched={matchedExperiment}
+                unitSystem={unitSystem}
+                verifiedSnapshot={safetyOfficer.verifiedSnapshot}
+                isGenerating={safetyOfficer.isGenerating}
+                activeThinking={safetyOfficer.activeThinking}
+                regeneratingMessageId={safetyOfficer.regeneratingMessageId}
+                highlightedMessageId={highlightedMessageId}
+                tierStatusLabel={safetyOfficer.tierStatusLabel}
+                auditPassCount={safetyOfficer.auditPassCount}
+                auditFailCount={safetyOfficer.auditFailCount}
+                debugCounters={safetyOfficer.debugCounters}
+                onSendMessage={safetyOfficer.sendChatMessage}
+                onRegenerateMessage={safetyOfficer.regenerateMessage}
+                onLoadExperiment={handleLoadExperiment}
+                onRunDiagnostic={safetyOfficer.analyzeSuppressionProtocol}
+              />
+            </>
           )}
         </div>
 
@@ -842,6 +925,8 @@ export default function App() {
           params={params}
           telemetry={telemetry}
           matched={matchedExperiment}
+          allExperiments={NASA_PSI_EXPERIMENTS}
+          activeComparisonExperiment={activeComparisonExperiment}
           unitSystem={unitSystem}
           markers={markers}
           pendingCaliperStart={pendingCaliperStart}
@@ -849,6 +934,8 @@ export default function App() {
           mobileOpen={mobileRightOpen}
           onCloseMobile={() => setMobileRightOpen(false)}
           onLoadExperiment={handleLoadExperiment}
+          onPrevNasaRun={() => handleCycleNasaRun('prev')}
+          onNextNasaRun={() => handleCycleNasaRun('next')}
           onPinCenterlineProbe={handlePinCenterlineProbe}
           onRemoveMarker={(id) => setMarkers((prev) => prev.filter((m) => m.id !== id))}
           onClearMarkers={handleClearMarkers}
@@ -859,6 +946,29 @@ export default function App() {
       )}
 
       <OfflineIndicator />
+
+      {onboarding.mode !== 'hidden' && (
+        <Suspense fallback={null}>
+          <LazyOnboarding
+            mode={onboarding.mode}
+            isMobile={onboarding.isMobile}
+            prefersReducedMotion={onboarding.prefersReducedMotion}
+            currentStep={onboarding.currentStep}
+            visibleStepPosition={onboarding.visibleStepPosition}
+            visibleStepCount={onboarding.visibleStepCount}
+            hasPrevStep={onboarding.hasPrevStep}
+            hasNextStep={onboarding.hasNextStep}
+            openedFromHelp={onboarding.openedFromHelp}
+            helpTriggerRef={helpButtonRef}
+            onDismiss={onboarding.dismiss}
+            onStartTour={onboarding.startTour}
+            onOpenValidation={onboarding.openValidation}
+            onBackToWelcome={onboarding.backToWelcome}
+            onNextStep={onboarding.nextStep}
+            onPrevStep={onboarding.prevStep}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -48,6 +48,7 @@ interface SimulationStageProps {
   leftSidebarOpen: boolean;
   rightInspectorOpen: boolean;
   isPlaying: boolean;
+  manualExtinguish?: boolean;
   isModelLoading?: boolean;
   showStreamlines: boolean;
   showVectors: boolean;
@@ -80,6 +81,8 @@ interface SimulationStageProps {
   onExportCsv: () => void;
   onCopyShareUrl: () => Promise<boolean>;
   onSelectBackend: (backend: InferenceBackendId) => void;
+  helpButtonRef?: React.RefObject<HTMLButtonElement | null>;
+  onOpenHelp?: () => void;
 }
 
 export function formatChronometer(elapsedS: number, testDuration: TestDurationMode): string {
@@ -103,13 +106,15 @@ function getStatusDotClass(
   return 'bg-zinc-400';
 }
 
-function getCompactStateLabel(telemetry: ThermoTelemetry): string {
+function getCompactStateLabel(telemetry: ThermoTelemetry, manualExtinguish = false): string {
   if (telemetry.chamberState === 'STANDBY') return 'STANDBY';
   if (telemetry.chamberState === 'IGNITING') {
     const rem = Math.max(0, IGNITION_PULSE_DURATION_S - telemetry.stateElapsedS).toFixed(1);
     return `IGNITING ${rem}s`;
   }
-  if (telemetry.chamberState === 'SELF_EXTINGUISHED') return 'EXTINGUISHED';
+  if (telemetry.chamberState === 'SELF_EXTINGUISHED') {
+    return manualExtinguish ? 'EXTINGUISHED (MANUAL)' : 'QUENCHED';
+  }
   return telemetry.overloadActive ? 'BURNING +80W' : 'BURNING';
 }
 
@@ -123,6 +128,7 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
   leftSidebarOpen,
   rightInspectorOpen,
   isPlaying,
+  manualExtinguish = false,
   isModelLoading = false,
   showStreamlines,
   showVectors,
@@ -155,6 +161,8 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
   onExportCsv,
   onCopyShareUrl,
   onSelectBackend,
+  helpButtonRef,
+  onOpenHelp,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -184,7 +192,7 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
   const spreadFmt = formatSpreadRate(telemetry.flameSpreadRateMs, unitSystem);
   const tempFmt = formatTemperature(telemetry.peakFlameTempK, unitSystem);
   const statusDot = getStatusDotClass(telemetry.chamberState, telemetry.regime);
-  const stateLabel = getCompactStateLabel(telemetry);
+  const stateLabel = getCompactStateLabel(telemetry, manualExtinguish);
 
   const burnFrac = Math.min(1, Math.max(0, telemetry.burnLengthMm / SPECIMEN_LENGTH_MM));
   const timeFrac =
@@ -602,6 +610,20 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
               <span>Fullscreen</span>
             </button>
 
+            {onOpenHelp && (
+              <button
+                ref={helpButtonRef}
+                type="button"
+                data-testid="onboarding-help-btn"
+                onClick={onOpenHelp}
+                title="Simulation Guide & Help"
+                aria-label="Open simulation guide and help"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border-0 bg-transparent font-mono text-xs font-semibold text-[#A1A1AA] transition-colors hover:bg-[#1C1C20]/60 hover:text-[#F4F4F5] shrink-0 cursor-pointer"
+              >
+                ?
+              </button>
+            )}
+
             {renderMoreMenu()}
 
             <button
@@ -661,6 +683,7 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
           <section
             aria-label="Microgravity Combustion Stage"
             data-testid="split-simulation-stage"
+            data-tour="sim-canvas"
             className="w-full border-b border-[#1F1F24] bg-[#0C0C0E]"
           >
             {/* Full-width Canvas Viewport inside Center Pane (~32vh inside ~42vh total stage) */}
